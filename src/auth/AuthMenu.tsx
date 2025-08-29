@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { useAuth, RoleKey } from "./useAuth";
-import Button from "../../components/ui/Button";
-import Select from "../../components/ui/Select";
+import { useAuth } from "./useAuth";
+import type { RoleKey } from "./useAuth";
+import Button from "../components/ui/Button";
+import Select from "../components/ui/Select";
 
 const ROLE_ITEMS = [
   { value: "buyer", label: "Пасічник" },
@@ -51,7 +52,7 @@ export default function AuthMenu({ onRoleSync }: { onRoleSync: (r: RoleKey) => v
                 <div className="mb-1 text-xs font-medium text-[var(--secondary)]">Обрати роль</div>
                 <Select
                   value={role}
-                  onChange={(v) => setRoleLocal(v as RoleKey)}
+                  onChange={(e) => setRoleLocal(e.target.value as RoleKey)}
                   items={ROLE_ITEMS.map((r) => ({ label: r.label, value: r.value }))}
                 />
               </div>
@@ -104,7 +105,7 @@ export default function AuthMenu({ onRoleSync }: { onRoleSync: (r: RoleKey) => v
             <div className="mb-1 text-xs font-medium text-[var(--secondary)]">Роль</div>
             <Select
               value={user.role}
-              onChange={(v) => doSetRole(v as RoleKey)}
+              onChange={(e) => doSetRole(e.target.value as RoleKey)}
               items={ROLE_ITEMS.map((r) => ({ label: r.label, value: r.value }))}
             />
           </div>

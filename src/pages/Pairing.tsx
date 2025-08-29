@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Select from "../components/ui/Select";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
@@ -24,7 +24,7 @@ const MPTS = [
 export default function Pairing() {
   const { push } = useToast();
 
-  const [queenId, setQueenId] = useState(QUEENS[0].id);
+  const [queenId, setQueenId] = useState<string>(QUEENS[0].id);
   const [topN, setTopN] = useState(3);
 
   // примітивна «рекомендація»
@@ -47,7 +47,7 @@ export default function Pairing() {
       const list: Plan[] = raw ? (JSON.parse(raw) as Plan[]) : [];
       list.unshift(plan);
       localStorage.setItem(LS_KEY, JSON.stringify(list));
-      push({ title: "Додано в плани", description: `${queenId} × ${mptId}`, tone: "success" });
+      push({ title: `Додано в плани: ${queenId} × ${mptId}`, tone: "success" });
     } catch {
       push({ title: "Помилка збереження", tone: "danger" });
     }
@@ -59,11 +59,20 @@ export default function Pairing() {
         <div className="grid gap-3 md:grid-cols-3">
           <div>
             <div className="mb-1 text-xs font-medium text-[var(--secondary)]">Матка</div>
-            <Select value={queenId} onChange={setQueenId} items={QUEENS.map((q) => ({ label: q.label, value: q.id }))} />
+            <Select value={queenId} onChange={(e) => setQueenId(e.target.value)} items={QUEENS.map((q) => ({ label: q.label, value: q.id }))} />
           </div>
           <div>
             <div className="mb-1 text-xs font-medium text-[var(--secondary)]">Скільки варіантів</div>
-            <Select value={String(topN)} onChange={(v) => setTopN(Number(v))} items={["3", "5", "7", "10"]} />
+            <Select
+              value={String(topN)}
+              onChange={(e) => setTopN(Number(e.target.value))}
+              items={[
+                { label: "3", value: "3" },
+                { label: "5", value: "5" },
+                { label: "7", value: "7" },
+                { label: "10", value: "10" },
+              ]}
+            />
           </div>
           <div className="flex items-end">
             <Badge tone="info" dot>Демо-рекомендації</Badge>
