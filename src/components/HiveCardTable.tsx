@@ -9,6 +9,7 @@ const CSV_HEADERS = [
   "Закр.",
   "Примітка",
 ] as const;
+const CSV_HEADER = CSV_HEADERS;
 
 function toCSV(rows: number) {
   const header = CSV_HEADERS.join(",");
@@ -91,71 +92,105 @@ export default function HiveCardTable() {
     downloadCSV(`hive-card-${yyyy}-${mm}-${dd}.csv`, csv);
   }
 
-  function parseCSV(text: string): string[][] {
+  type CsvRow = {
+    hiveNo: string;
+    date: string; // YYYY-MM-DD
+    occupied: number;
+    broodFrames: number;
+    open: number;
+    sealed: number;
+    note: string;
+  };
+
+  function parseCSVText(text: string): string[][] {
     const rows: string[][] = [];
-    let cur: string[] = [], cell = "", inQuotes = false;
+    let cur = "";
+    let row: string[] = [];
+    let inQuotes = false;
     for (let i = 0; i < text.length; i++) {
-      const ch = text[i], next = text[i + 1];
+      const ch = text[i];
+      const next = text[i + 1];
       if (inQuotes) {
-        if (ch === '"' && next === '"') { cell += '"'; i++; }
+        if (ch === '"' && next === '"') { cur += '"'; i++; }
         else if (ch === '"') { inQuotes = false; }
-        else { cell += ch; }
+        else { cur += ch; }
       } else {
         if (ch === '"') inQuotes = true;
-        else if (ch === ',') { cur.push(cell); cell = ""; }
-        else if (ch === '\n' || ch === '\r') {
-          if (ch === '\r' && next === '\n') i++;
-          cur.push(cell); cell = "";
-          if (cur.some(v => v.trim() !== "")) rows.push(cur);
-          cur = [];
-        } else { cell += ch; }
+        else if (ch === ',') { row.push(cur); cur = ""; }
+        else if (ch === '\r') { /* wait for \n */ }
+        else if (ch === '\n') { row.push(cur); rows.push(row); row = []; cur = ""; }
+        else { cur += ch; }
       }
     }
-    if (cell.length || cur.length) { cur.push(cell); if (cur.some(v => v.trim() !== "")) rows.push(cur); }
+    if (cur.length > 0 || row.length > 0) { row.push(cur); rows.push(row); }
     return rows;
   }
 
-  async function handleImport(file: File) {
-    const text = await file.text();
-    const rowsCsv = parseCSV(text);
-    if (!rowsCsv.length) return;
-
-    const [header, ...data] = rowsCsv;
-    const normalize = (s: string) => s.trim().toLowerCase();
-    const idx = (label: string) => header.findIndex((h) => normalize(h) === normalize(label));
-
-    const map = {
-      hiveNo: idx("Вулик №"),
-      date: idx("Дата"),
-      frames: idx("Зайняті рамки"),
-      broodFrames: idx("Рамки розплоду"),
-      openBrood: idx("Відкр."),
-      sealedBrood: idx("Закр."),
-      notes: idx("Примітка"),
-    } as const;
-
-    if (map.hiveNo < 0 || map.date < 0) {
-      alert("Некоректний шаблон CSV: немає обов’язкових колонок");
-      return;
+  function mapCsv(rowsRaw: string[][]): CsvRow[] {
+    if (!rowsRaw.length) return [];
+    const header = rowsRaw[0];
+    const expected = CSV_HEADER.join(",");
+    const got = header.join(",");
+    if (got !== expected) {
+      throw new Error("Невірні заголовки CSV. Очікується: " + expected);
     }
+    const out: CsvRow[] = [];
+    for (let i = 1; i < rowsRaw.length; i++) {
+      const r = rowsRaw[i];
+      if (r.length === 1 && r[0].trim() === "") continue;
+      const [hiveNo, date, occupied, broodFrames, open, sealed, note] = r;
+      const num = (v: string) => {
+        const n = Number(v);
+        if (!Number.isFinite(n)) throw new Error(`Помилка у числовому полі (рядок ${i + 1}): "${v}"`);
+        return n;
+      };
+      out.push({
+        hiveNo: (hiveNo ?? "").trim(),
+        date: (date ?? "").trim(),
+        occupied: num(occupied ?? "0"),
+        broodFrames: num(broodFrames ?? "0"),
+        open: num(open ?? "0"),
+        sealed: num(sealed ?? "0"),
+        note: (note ?? "").trim(),
+      });
+    }
+    return out;
+  }
 
-    const imported: HiveRow[] = data
-      .map((r) => ({
-        hiveNo: r[map.hiveNo] ?? "",
-        date: r[map.date] ?? "",
-        frames: Number(r[map.frames] ?? 0) || 0,
-        broodFrames: Number(r[map.broodFrames] ?? 0) || 0,
-        openBrood: Number(r[map.openBrood] ?? 0) || 0,
-        sealedBrood: Number(r[map.sealedBrood] ?? 0) || 0,
-        notes: r[map.notes] ?? "",
-      }))
-      .filter((x) =>
-        [x.hiveNo, x.date, x.notes].some((v) => (v ?? "").trim() !== "") ||
-        [x.frames, x.broodFrames, x.openBrood, x.sealedBrood].some((n) => Number(n) > 0)
-      );
+  function handleImportClick() {
+    fileRef.current?.click();
+  }
 
-    if (!imported.length) return;
-    setRows((prev) => [...prev, ...imported]);
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    try {
+      const text = await f.text();
+      const raw = parseCSVText(text);
+      const parsed = mapCsv(raw);
+      setRows((prev) => {
+        const key = (r: HiveRow) => `${r.hiveNo}#${r.date}`;
+        const map = new Map(prev.map((r) => [key(r), r] as const));
+        for (const r of parsed) {
+          const nr: HiveRow = {
+            hiveNo: r.hiveNo,
+            date: r.date,
+            frames: r.occupied,
+            broodFrames: r.broodFrames,
+            openBrood: r.open,
+            sealedBrood: r.sealed,
+            notes: r.note,
+          };
+          map.set(key(nr), { ...(map.get(key(nr)) ?? nr), ...nr });
+        }
+        return Array.from(map.values());
+      });
+    } catch (err: unknown) {
+      const msg = typeof err === 'object' && err && 'message' in err ? String((err as { message: string }).message) : 'Помилка імпорту CSV';
+      alert(msg);
+    } finally {
+      e.target.value = "";
+    }
   }
 
   return (
@@ -163,20 +198,11 @@ export default function HiveCardTable() {
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Вуликова карта</h2>
         <div className="flex items-center gap-2">
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".csv"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) handleImport(f).finally(() => (e.currentTarget.value = ""));
-            }}
-          />
+          <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleImportFile} />
           <button
             type="button"
             className="px-3 py-2 rounded-md border text-sm"
-            onClick={() => fileRef.current?.click()}
+            onClick={handleImportClick}
           >
             Імпорт з CSV
           </button>
