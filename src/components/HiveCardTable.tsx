@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as XLSX from "xlsx";
+import { exportHiveRowsToXLSX, type HiveRow as ExportHiveRow } from "../utils/xlsx";
 
 const CSV_HEADERS = [
   "Вулик №",
@@ -228,10 +229,16 @@ export default function HiveCardTable() {
 
   // XLSX export/import handlers
   function exportXLSX(filename = "hive-card.xlsx") {
-    const wb = XLSX.utils.book_new();
-    const ws = rowsToWorksheet(rows);
-    XLSX.utils.book_append_sheet(wb, ws, "HiveCard");
-    XLSX.writeFile(wb, filename);
+    const mapped: ExportHiveRow[] = rows.map((r) => ({
+      hiveNo: r.hiveNo,
+      date: r.date,
+      occupied: r.frames,
+      broodFrames: r.broodFrames,
+      open: r.openBrood,
+      capped: r.sealedBrood,
+      note: r.notes,
+    }));
+    exportHiveRowsToXLSX(mapped, filename);
   }
 
   function downloadTemplateXLSX(filename = "hive-card-template.xlsx") {
