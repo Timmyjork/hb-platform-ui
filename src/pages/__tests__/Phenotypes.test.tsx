@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Phenotypes from '../Phenotypes'
+import { toCSV } from '../../components/utils/csv'
 
 describe('Phenotypes page', () => {
   it('renders heading "Фенотипи"', () => {
@@ -19,6 +20,19 @@ describe('Phenotypes page', () => {
     await user.type(screen.getByLabelText('Гігієнічність (%)'), '80')
     await user.type(screen.getByLabelText('Яєць на добу'), '1200')
 
-    expect(screen.getByRole('button', { name: 'Зберегти' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Зберегти запис' })).toBeEnabled()
+  })
+
+  it('shows saved tab empty state', async () => {
+    const user = userEvent.setup()
+    render(<Phenotypes />)
+    await user.click(screen.getByRole('button', { name: 'Збережені записи' }))
+    expect(screen.getByText('Немає збережених записів')).toBeInTheDocument()
+  })
+
+  it('toCSV flattens nested objects', () => {
+    const csv = toCSV([{ a: 1, b: { c: 2 } }])
+    expect(csv.split('\n')[0]).toBe('a,b.c')
+    expect(csv.split('\n')[1]).toBe('1,2')
   })
 })

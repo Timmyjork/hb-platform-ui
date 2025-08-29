@@ -3,52 +3,68 @@ import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import Button from "../components/ui/Button";
 import Toggle from "../components/ui/Toggle";
+import * as phenos from "../state/phenotypes";
+import { toCSV } from "../components/utils/csv";
+
+type Scale = 1 | 2 | 3 | 4 | 5;
+type Color = "light" | "yellow" | "dark" | "black";
 
 type Draft = {
-  // Морфологія
-  lengthMm: string;
-  massPreMg: string;
-  massPostMg: string;
-  color: "" | "light" | "yellow" | "dark" | "black";
-  abdomenShape: string; // 1..5
-  symmetry: boolean;
-  notes: string;
-  // Поведінка
-  aggression: string; // 1..5
-  swarming: string; // 1..5
-  hygienicPct: string; // 0..100
-  winterHardiness: string; // 1..5
-  // Продуктивність
-  eggsPerDay: string;
-  broodDensity: string; // 1..5
-  honeyKg: string;
-  winterFeedKg: string;
-  springDev: string; // 1..5
+  morphology: {
+    lengthMm: number; // 5..30
+    massPreMg: number; // >=0
+    massPostMg: number; // >=0
+    color: Color | "";
+    abdomenShape: Scale | 0;
+    symmetry: boolean;
+    notes?: string;
+  };
+  behavior: {
+    aggression: Scale | 0;
+    swarming: Scale | 0;
+    hygienicPct: number; // 0..100
+    winterHardiness: Scale | 0;
+  };
+  productivity: {
+    eggsPerDay: number; // >=0
+    broodDensity: Scale | 0;
+    honeyKg: number; // >=0
+    winterFeedKg: number; // >=0
+    springDev: Scale | 0;
+  };
 };
 
 const LS_KEY = "hb:phenotypes:draft" as const;
 
 const emptyDraft: Draft = {
-  lengthMm: "",
-  massPreMg: "",
-  massPostMg: "",
-  color: "",
-  abdomenShape: "",
-  symmetry: false,
-  notes: "",
-  aggression: "",
-  swarming: "",
-  hygienicPct: "",
-  winterHardiness: "",
-  eggsPerDay: "",
-  broodDensity: "",
-  honeyKg: "",
-  winterFeedKg: "",
-  springDev: "",
+  morphology: {
+    lengthMm: 0,
+    massPreMg: 0,
+    massPostMg: 0,
+    color: "",
+    abdomenShape: 0,
+    symmetry: false,
+    notes: "",
+  },
+  behavior: {
+    aggression: 0,
+    swarming: 0,
+    hygienicPct: 0,
+    winterHardiness: 0,
+  },
+  productivity: {
+    eggsPerDay: 0,
+    broodDensity: 0,
+    honeyKg: 0,
+    winterFeedKg: 0,
+    springDev: 0,
+  },
 };
 
 export default function Phenotypes() {
+  const [tab, setTab] = useState<"form" | "saved">("form");
   const [form, setForm] = useState<Draft>(emptyDraft);
+  const [saved, setSaved] = useState<phenos.PhenotypeRecord[]>([]);
 
   useEffect(() => {
     try {
@@ -57,20 +73,32 @@ export default function Phenotypes() {
     } catch {
       /* ignore */
     }
+    setSaved(phenos.list());
   }, []);
 
   const errors = useMemo(() => validate(form), [form]);
   const isValid = Object.keys(errors).length === 0;
 
-  const onChange = (key: keyof Draft) => (
+  const set = <K extends keyof Draft, P extends keyof Draft[K]>(section: K, prop: P) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
-    const value = e.currentTarget.type === "checkbox" ? (e.currentTarget as HTMLInputElement).checked : e.currentTarget.value;
-    setForm((f) => ({ ...f, [key]: value } as Draft));
+    const el = e.currentTarget as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+    let value: unknown = el.type === "checkbox" ? (el as HTMLInputElement).checked : el.value;
+    if (el.type === "number") value = el.value === "" ? 0 : Number(el.value);
+    if (section !== "morphology" && section !== "behavior" && section !== "productivity") return;
+    setForm((f) => ({ ...f, [section]: { ...f[section], [prop]: value } }) as Draft);
   };
 
   const save = () => {
-    localStorage.setItem(LS_KEY, JSON.stringify(form));
+    const rec = phenos.save({
+      morphology: form.morphology,
+      behavior: form.behavior,
+      productivity: form.productivity,
+    });
+    setSaved((s) => [rec, ...s]);
+    localStorage.removeItem(LS_KEY);
+    setForm(emptyDraft);
+    setTab("saved");
   };
 
   const reset = () => {
@@ -80,11 +108,26 @@ export default function Phenotypes() {
 
   return (
     <div className="p-4 rounded-xl border border-[var(--divider)] bg-[var(--surface)] shadow-sm">
+      <div className="mb-2 flex items-center gap-2">
+        <button
+          className={`rounded px-3 py-1.5 text-sm ${tab === "form" ? "bg-gray-900 text-white" : "border border-[var(--divider)]"}`}
+          onClick={() => setTab("form")}
+        >
+          Форма
+        </button>
+        <button
+          className={`rounded px-3 py-1.5 text-sm ${tab === "saved" ? "bg-gray-900 text-white" : "border border-[var(--divider)]"}`}
+          onClick={() => setTab("saved")}
+        >
+          Збережені записи
+        </button>
+      </div>
       <h1 className="text-xl font-semibold mb-2">Фенотипи</h1>
       <p className="mb-4 text-sm text-[var(--secondary)]">
         Тут буде форма для введення фенотипічних ознак матки та колонії.
       </p>
 
+      {tab === "form" && (<>
       {/* Морфологія */}
       <section className="mb-4">
         <div className="mb-2 text-sm font-medium">Морфологія</div>
@@ -92,13 +135,13 @@ export default function Phenotypes() {
           <Input
             label="Довжина тіла (мм)"
             type="number"
-            min={3}
-            max={15}
+            min={5}
+            max={30}
             step="0.1"
-            value={form.lengthMm}
-            onChange={onChange("lengthMm")}
-            hint="3–15 мм"
-            error={errors.lengthMm}
+            value={form.morphology.lengthMm}
+            onChange={set("morphology", "lengthMm")}
+            hint="5–30 мм"
+            error={errors.morphology?.lengthMm}
           />
           <Input
             label="Маса до (мг)"
@@ -106,10 +149,10 @@ export default function Phenotypes() {
             min={50}
             max={400}
             step="1"
-            value={form.massPreMg}
-            onChange={onChange("massPreMg")}
+            value={form.morphology.massPreMg}
+            onChange={set("morphology", "massPreMg")}
             hint="Опційно"
-            error={errors.massPreMg}
+            error={errors.morphology?.massPreMg}
           />
           <Input
             label="Маса після (мг)"
@@ -117,15 +160,15 @@ export default function Phenotypes() {
             min={50}
             max={500}
             step="1"
-            value={form.massPostMg}
-            onChange={onChange("massPostMg")}
+            value={form.morphology.massPostMg}
+            onChange={set("morphology", "massPostMg")}
             hint="Опційно"
-            error={errors.massPostMg}
+            error={errors.morphology?.massPostMg}
           />
           <Select
             label="Колір"
-            value={form.color}
-            onChange={onChange("color")}
+            value={form.morphology.color}
+            onChange={set("morphology", "color")}
             items={[
               { label: "Оберіть…", value: "" },
               { label: "Світлий", value: "light" },
@@ -136,14 +179,17 @@ export default function Phenotypes() {
           />
           <Select
             label="Форма черевця"
-            value={form.abdomenShape}
-            onChange={onChange("abdomenShape")}
+            value={String(form.morphology.abdomenShape || "")}
+            onChange={(e) => setForm((f) => ({
+              ...f,
+              morphology: { ...f.morphology, abdomenShape: (e.target.value ? Number(e.target.value) : 0) as Scale | 0 },
+            }))}
             items={[{ label: "Оберіть…", value: "" }, ...[1, 2, 3, 4, 5].map((n) => ({ label: String(n), value: String(n) }))]}
-            error={errors.abdomenShape}
+            error={errors.morphology?.abdomenShape}
           />
           <Toggle
-            checked={form.symmetry}
-            onChange={onChange("symmetry")}
+            checked={form.morphology.symmetry}
+            onChange={set("morphology", "symmetry")}
             label="Симетрія"
           />
         </div>
@@ -152,8 +198,8 @@ export default function Phenotypes() {
             <span className="text-xs font-medium text-[var(--secondary)]">Нотатки</span>
             <textarea
               className="min-h-[80px] w-full rounded-md border border-[var(--divider)] bg-[var(--surface)] p-2 text-sm outline-none focus:ring-2 focus:ring-[var(--primary)]"
-              value={form.notes}
-              onChange={onChange("notes")}
+              value={form.morphology.notes}
+              onChange={set("morphology", "notes")}
               placeholder="Додаткові зауваження…"
             />
           </label>
@@ -166,34 +212,43 @@ export default function Phenotypes() {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <Select
             label="Агресивність (1–5)"
-            value={form.aggression}
-            onChange={onChange("aggression")}
+            value={String(form.behavior.aggression || "")}
+            onChange={(e) => setForm((f) => ({
+              ...f,
+              behavior: { ...f.behavior, aggression: (e.target.value ? Number(e.target.value) : 0) as Scale | 0 },
+            }))}
             items={[{ label: "Оберіть…", value: "" }, ...[1, 2, 3, 4, 5].map((n) => ({ label: String(n), value: String(n) }))]}
-            error={errors.aggression}
+            error={errors.behavior?.aggression}
           />
           <Select
             label="Ройливість (1–5)"
-            value={form.swarming}
-            onChange={onChange("swarming")}
+            value={String(form.behavior.swarming || "")}
+            onChange={(e) => setForm((f) => ({
+              ...f,
+              behavior: { ...f.behavior, swarming: (e.target.value ? Number(e.target.value) : 0) as Scale | 0 },
+            }))}
             items={[{ label: "Оберіть…", value: "" }, ...[1, 2, 3, 4, 5].map((n) => ({ label: String(n), value: String(n) }))]}
-            error={errors.swarming}
+            error={errors.behavior?.swarming}
           />
           <Input
             label="Гігієнічність (%)"
             type="number"
             min={0}
             max={100}
-            value={form.hygienicPct}
-            onChange={onChange("hygienicPct")}
+            value={form.behavior.hygienicPct}
+            onChange={set("behavior", "hygienicPct")}
             hint="0–100%"
-            error={errors.hygienicPct}
+            error={errors.behavior?.hygienicPct}
           />
           <Select
             label="Зимостійкість (1–5)"
-            value={form.winterHardiness}
-            onChange={onChange("winterHardiness")}
+            value={String(form.behavior.winterHardiness || "")}
+            onChange={(e) => setForm((f) => ({
+              ...f,
+              behavior: { ...f.behavior, winterHardiness: (e.target.value ? Number(e.target.value) : 0) as Scale | 0 },
+            }))}
             items={[{ label: "Оберіть…", value: "" }, ...[1, 2, 3, 4, 5].map((n) => ({ label: String(n), value: String(n) }))]}
-            error={errors.winterHardiness}
+            error={errors.behavior?.winterHardiness}
           />
         </div>
       </section>
@@ -207,14 +262,17 @@ export default function Phenotypes() {
             type="number"
             min={0}
             max={4000}
-            value={form.eggsPerDay}
-            onChange={onChange("eggsPerDay")}
-            error={errors.eggsPerDay}
+            value={form.productivity.eggsPerDay}
+            onChange={set("productivity", "eggsPerDay")}
+            error={errors.productivity?.eggsPerDay}
           />
           <Select
             label="Щільність розплоду (1–5)"
-            value={form.broodDensity}
-            onChange={onChange("broodDensity")}
+            value={String(form.productivity.broodDensity || "")}
+            onChange={(e) => setForm((f) => ({
+              ...f,
+              productivity: { ...f.productivity, broodDensity: (e.target.value ? Number(e.target.value) : 0) as Scale | 0 },
+            }))}
             items={[{ label: "Оберіть…", value: "" }, ...[1, 2, 3, 4, 5].map((n) => ({ label: String(n), value: String(n) }))]}
           />
           <Input
@@ -223,8 +281,8 @@ export default function Phenotypes() {
             min={0}
             max={200}
             step="0.1"
-            value={form.honeyKg}
-            onChange={onChange("honeyKg")}
+            value={form.productivity.honeyKg}
+            onChange={set("productivity", "honeyKg")}
           />
           <Input
             label="Корм на зиму, кг"
@@ -232,13 +290,16 @@ export default function Phenotypes() {
             min={0}
             max={200}
             step="0.1"
-            value={form.winterFeedKg}
-            onChange={onChange("winterFeedKg")}
+            value={form.productivity.winterFeedKg}
+            onChange={set("productivity", "winterFeedKg")}
           />
           <Select
             label="Весняний розвиток (1–5)"
-            value={form.springDev}
-            onChange={onChange("springDev")}
+            value={String(form.productivity.springDev || "")}
+            onChange={(e) => setForm((f) => ({
+              ...f,
+              productivity: { ...f.productivity, springDev: (e.target.value ? Number(e.target.value) : 0) as Scale | 0 },
+            }))}
             items={[{ label: "Оберіть…", value: "" }, ...[1, 2, 3, 4, 5].map((n) => ({ label: String(n), value: String(n) }))]}
           />
         </div>
@@ -246,7 +307,7 @@ export default function Phenotypes() {
 
       <div className="flex items-center gap-2">
         <Button onClick={save} disabled={!isValid}>
-          Зберегти
+          Зберегти запис
         </Button>
         <Button variant="secondary" onClick={reset}>
           Скинути
@@ -255,55 +316,94 @@ export default function Phenotypes() {
           <span className="text-xs text-[var(--danger)]">Заповніть обовʼязкові поля</span>
         )}
       </div>
+      </>)}
+
+      {tab === "saved" && (
+        <SavedList records={saved} onExport={() => exportCSV(saved)} />
+      )}
     </div>
   );
 }
 
-function validate(f: Draft): Partial<Record<keyof Draft, string>> {
-  const e: Partial<Record<keyof Draft, string>> = {};
+function validate(f: Draft) {
+  const e: any = { morphology: {}, behavior: {}, productivity: {} } as {
+    morphology: Partial<Record<keyof Draft["morphology"], string>>;
+    behavior: Partial<Record<keyof Draft["behavior"], string>>;
+    productivity: Partial<Record<keyof Draft["productivity"], string>>;
+  };
 
-  const num = (v: string) => (v.trim() === "" ? NaN : Number(v));
+  if (!(f.morphology.lengthMm >= 5 && f.morphology.lengthMm <= 30)) e.morphology.lengthMm = "5–30 мм";
+  if (!f.morphology.color) e.morphology.color = "Оберіть колір";
 
-  // Обовʼязкові: lengthMm, color, aggression, hygienicPct, eggsPerDay
-  const len = num(f.lengthMm);
-  if (!(len >= 3 && len <= 15)) e.lengthMm = "3–15 мм";
+  if (!(f.behavior.aggression >= 1 && f.behavior.aggression <= 5)) e.behavior.aggression = "1–5";
+  if (!(f.behavior.hygienicPct >= 0 && f.behavior.hygienicPct <= 100)) e.behavior.hygienicPct = "0–100";
 
-  if (!f.color) e.color = "Оберіть колір";
+  if (!(f.productivity.eggsPerDay >= 0 && f.productivity.eggsPerDay <= 4000)) e.productivity.eggsPerDay = ">= 0";
 
-  const agg = Number(f.aggression);
-  if (!(agg >= 1 && agg <= 5)) e.aggression = "1–5";
+  if (f.morphology.massPreMg && !(f.morphology.massPreMg >= 50 && f.morphology.massPreMg <= 400)) e.morphology.massPreMg = "50–400";
+  if (f.morphology.massPostMg && !(f.morphology.massPostMg >= 50 && f.morphology.massPostMg <= 500)) e.morphology.massPostMg = "50–500";
 
-  const hyg = num(f.hygienicPct);
-  if (!(hyg >= 0 && hyg <= 100)) e.hygienicPct = "0–100";
+  if (f.morphology.abdomenShape && !(f.morphology.abdomenShape >= 1 && f.morphology.abdomenShape <= 5)) e.morphology.abdomenShape = "1–5";
+  if (f.behavior.swarming && !(f.behavior.swarming >= 1 && f.behavior.swarming <= 5)) e.behavior.swarming = "1–5";
+  if (f.behavior.winterHardiness && !(f.behavior.winterHardiness >= 1 && f.behavior.winterHardiness <= 5)) e.behavior.winterHardiness = "1–5";
+  if (f.productivity.broodDensity && !(f.productivity.broodDensity >= 1 && f.productivity.broodDensity <= 5)) e.productivity.broodDensity = "1–5";
+  if (f.productivity.honeyKg && !(f.productivity.honeyKg >= 0 && f.productivity.honeyKg <= 200)) e.productivity.honeyKg = "0–200";
+  if (f.productivity.winterFeedKg && !(f.productivity.winterFeedKg >= 0 && f.productivity.winterFeedKg <= 200)) e.productivity.winterFeedKg = "0–200";
+  if (f.productivity.springDev && !(f.productivity.springDev >= 1 && f.productivity.springDev <= 5)) e.productivity.springDev = "1–5";
 
-  const eggs = num(f.eggsPerDay);
-  if (!(eggs >= 0 && eggs <= 4000)) e.eggsPerDay = ">= 0";
+  // remove empty sections
+  (Object.keys(e) as (keyof typeof e)[]).forEach((k) => {
+    if (Object.keys(e[k]).length === 0) delete e[k];
+  });
 
-  // Додаткові (необовʼязкові) — перевіряємо, якщо вказано
-  const pre = num(f.massPreMg);
-  if (f.massPreMg && !(pre >= 50 && pre <= 400)) e.massPreMg = "50–400";
-  const post = num(f.massPostMg);
-  if (f.massPostMg && !(post >= 50 && post <= 500)) e.massPostMg = "50–500";
+  return e as Partial<Record<keyof Draft, any>>;
+}
 
-  const abd = Number(f.abdomenShape);
-  if (f.abdomenShape && !(abd >= 1 && abd <= 5)) e.abdomenShape = "1–5";
+function exportCSV(records: phenos.PhenotypeRecord[]) {
+  if (!records.length) return;
+  const csv = toCSV(records as unknown as Record<string, unknown>[]);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "phenotypes.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
-  const swarm = Number(f.swarming);
-  if (f.swarming && !(swarm >= 1 && swarm <= 5)) e.swarming = "1–5";
-
-  const wh = Number(f.winterHardiness);
-  if (f.winterHardiness && !(wh >= 1 && wh <= 5)) e.winterHardiness = "1–5";
-
-  const dens = Number(f.broodDensity);
-  if (f.broodDensity && !(dens >= 1 && dens <= 5)) e.broodDensity = "1–5";
-
-  const hk = num(f.honeyKg);
-  if (f.honeyKg && !(hk >= 0 && hk <= 200)) e.honeyKg = "0–200";
-  const wk = num(f.winterFeedKg);
-  if (f.winterFeedKg && !(wk >= 0 && wk <= 200)) e.winterFeedKg = "0–200";
-
-  const sd = Number(f.springDev);
-  if (f.springDev && !(sd >= 1 && sd <= 5)) e.springDev = "1–5";
-
-  return e;
+function SavedList({ records, onExport }: { records: phenos.PhenotypeRecord[]; onExport: () => void }) {
+  return (
+    <div className="mt-2">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="text-sm font-medium">Збережені записи</div>
+        <Button onClick={onExport} disabled={records.length === 0}>Експорт CSV</Button>
+      </div>
+      {records.length === 0 ? (
+        <div className="text-sm text-[var(--secondary)]">Немає збережених записів</div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-[var(--divider)]">
+          <table className="w-full border-collapse text-sm">
+            <thead className="bg-gray-50 text-left">
+              <tr>
+                <th className="px-3 py-2">ID</th>
+                <th className="px-3 py-2">Дата</th>
+                <th className="px-3 py-2">Коротко</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((r) => (
+                <tr key={r.id} className="border-t border-[var(--divider)]">
+                  <td className="px-3 py-2">{r.id}</td>
+                  <td className="px-3 py-2">{new Date(r.createdAt).toLocaleString()}</td>
+                  <td className="px-3 py-2">L={r.morphology.lengthMm} мм; Hyg={r.behavior.hygienicPct}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
 }
