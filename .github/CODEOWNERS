@@ -1,0 +1,10 @@
+# Code owners for reviews and required approvals
+
+# Default owners for all files
+* @Timmyjork
+
+# Examples: uncomment and adjust as the team grows
+# src/components/ @Timmyjork
+# src/pages/ @Timmyjork
+# src/auth/ @Timmyjork
+
