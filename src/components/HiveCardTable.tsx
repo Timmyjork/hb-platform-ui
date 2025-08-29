@@ -54,6 +54,43 @@ export default function HiveCardTable() {
       { hiveNo: "", date: "", frames: 0, broodFrames: 0, openBrood: 0, sealedBrood: 0, notes: "" },
     ]);
 
+  function rowsToCSV(data: HiveRow[]): string {
+    const header = [
+      "Вулик №",
+      "Дата",
+      "Зайняті рамки",
+      "Рамки розплоду",
+      "Відкр.",
+      "Закр.",
+      "Примітка",
+    ];
+    const escape = (v: unknown) => {
+      const s = String(v ?? "");
+      const needs = /[",\n\r]/.test(s);
+      const doubled = s.replace(/"/g, '""');
+      return needs ? `"${doubled}"` : doubled;
+    };
+    const body = data.map((r) =>
+      [r.hiveNo, r.date, r.frames, r.broodFrames, r.openBrood, r.sealedBrood, r.notes]
+        .map(escape)
+        .join(",")
+    );
+    return [header.join(","), ...body].join("\r\n");
+  }
+
+  function handleExportCSV() {
+    if (!rows || rows.length === 0) {
+      alert("Немає даних для експорту");
+      return;
+    }
+    const csv = rowsToCSV(rows);
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    downloadCSV(`hive-card-${yyyy}-${mm}-${dd}.csv`, csv);
+  }
+
   function parseCSV(text: string): string[][] {
     const rows: string[][] = [];
     let cur: string[] = [], cell = "", inQuotes = false;
@@ -142,6 +179,13 @@ export default function HiveCardTable() {
             onClick={() => fileRef.current?.click()}
           >
             Імпорт з CSV
+          </button>
+          <button
+            type="button"
+            className="px-3 py-2 rounded-md border text-sm"
+            onClick={handleExportCSV}
+          >
+            Експорт у CSV
           </button>
           <button
             type="button"
