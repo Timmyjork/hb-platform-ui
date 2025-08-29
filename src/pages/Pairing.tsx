@@ -5,29 +5,31 @@ import Badge from "../components/ui/Badge";
 import { useToast } from "../components/ui/Toast";
 
 type Reco = { mptId: string; score: number };
+type Plan = { id: string; queenId: string; mptId: string; createdAt: string };
 
 const LS_KEY = "hb_plans_v1";
+
+// Hoisted demo data to keep stable references across renders
+const QUEENS = [
+  { id: "UA-QUEEN-2025-001", label: "2025-001 / Карніка" },
+  { id: "UA-QUEEN-2025-014", label: "2025-014 / Карпатка" },
+] as const;
+
+const MPTS = [
+  { id: "MPT-DZ-001", label: "Джезказган-001" },
+  { id: "MPT-AL-002", label: "Аланія-002" },
+  { id: "MPT-TR-003", label: "Трускавець-003" },
+] as const;
 
 export default function Pairing() {
   const { push } = useToast();
 
-  // демо-джерела
-  const queens = [
-    { id: "UA-QUEEN-2025-001", label: "2025-001 / Карніка" },
-    { id: "UA-QUEEN-2025-014", label: "2025-014 / Карпатка" },
-  ];
-  const mpts = [
-    { id: "MPT-DZ-001", label: "Джезказган-001" },
-    { id: "MPT-AL-002", label: "Аланія-002" },
-    { id: "MPT-TR-003", label: "Трускавець-003" },
-  ];
-
-  const [queenId, setQueenId] = useState(queens[0].id);
+  const [queenId, setQueenId] = useState(QUEENS[0].id);
   const [topN, setTopN] = useState(3);
 
   // примітивна «рекомендація»
   const recos = useMemo<Reco[]>(() => {
-    return mpts
+    return MPTS
       .map((m, i) => ({ mptId: m.id, score: 100 - i * 7 - (queenId.endsWith("14") ? 5 : 0) }))
       .sort((a, b) => b.score - a.score)
       .slice(0, topN);
@@ -42,7 +44,7 @@ export default function Pairing() {
     };
     try {
       const raw = localStorage.getItem(LS_KEY);
-      const list = raw ? (JSON.parse(raw) as any[]) : [];
+      const list: Plan[] = raw ? (JSON.parse(raw) as Plan[]) : [];
       list.unshift(plan);
       localStorage.setItem(LS_KEY, JSON.stringify(list));
       push({ title: "Додано в плани", description: `${queenId} × ${mptId}`, tone: "success" });
@@ -57,7 +59,7 @@ export default function Pairing() {
         <div className="grid gap-3 md:grid-cols-3">
           <div>
             <div className="mb-1 text-xs font-medium text-[var(--secondary)]">Матка</div>
-            <Select value={queenId} onChange={setQueenId} items={queens.map((q) => ({ label: q.label, value: q.id }))} />
+            <Select value={queenId} onChange={setQueenId} items={QUEENS.map((q) => ({ label: q.label, value: q.id }))} />
           </div>
           <div>
             <div className="mb-1 text-xs font-medium text-[var(--secondary)]">Скільки варіантів</div>
@@ -73,7 +75,7 @@ export default function Pairing() {
         <div className="border-b border-[var(--divider)] px-4 py-3 text-sm font-medium">Найкращі МПТ</div>
         <div className="divide-y divide-[var(--divider)]">
           {recos.map((r) => {
-            const meta = mpts.find((m) => m.id === r.mptId)!;
+            const meta = MPTS.find((m) => m.id === r.mptId)!;
             return (
               <div key={r.mptId} className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-3">

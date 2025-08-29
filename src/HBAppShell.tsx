@@ -3,7 +3,6 @@ import { ToastProvider, useToast } from "./components/ui/Toast";
 import DataTable from "./components/table/DataTable";
 import type { Row as QueenRow } from "./components/table/DataTable";
 import Button from "./components/ui/Button";
-import Badge from "./components/ui/Badge";
 import BeekeeperQueens from "./pages/BeekeeperQueens";
 
 // ——— Ролі
@@ -13,6 +12,8 @@ const ROLES = [
   { key: "breeder", label: "Маткар" },
   { key: "buyer", label: "Пасічник" },
 ] as const;
+
+type RoleKey = (typeof ROLES)[number]["key"];
 
 const NAV_BY_ROLE: Record<string, { id: string; label: string }[]> = {
   global_admin: [
@@ -197,7 +198,7 @@ function HeaderActions() {
   );
 }
 
-function RoleSelector({ value, onChange }: { value: string; onChange: (v: any) => void }) {
+function RoleSelector({ value, onChange }: { value: RoleKey; onChange: (v: RoleKey) => void }) {
   return (
     <div className="flex items-center gap-2">
       <label className="sr-only" htmlFor="role">
@@ -206,7 +207,7 @@ function RoleSelector({ value, onChange }: { value: string; onChange: (v: any) =
       <select
         id="role"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value as RoleKey)}
         className="rounded-md border border-[var(--divider)] bg-[var(--surface)] px-3 py-1.5 text-sm hover:bg-gray-50 focus:ring-2 focus:ring-[var(--primary)]"
         aria-label="Оберіть роль"
       >

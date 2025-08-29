@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState } from "react";
 type Toast = { id: number; title: string; tone?: "success"|"warning"|"danger"|"info"|"default" };
 const Ctx = createContext<{push:(t:Omit<Toast,"id">)=>void}>({ push: () => {} });
