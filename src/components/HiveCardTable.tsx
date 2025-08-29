@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const CSV_HEADERS = [
   "Вулик №",
@@ -39,10 +39,21 @@ export interface HiveRow {
   notes: string; // Примітка
 }
 
+const DEFAULT_ROWS: HiveRow[] = [
+  { hiveNo: "", date: "", frames: 0, broodFrames: 0, openBrood: 0, sealedBrood: 0, notes: "" },
+];
+
+const LS_KEY = "hiveCard.rows.v1" as const;
+
 export default function HiveCardTable() {
-  const [rows, setRows] = useState<HiveRow[]>([
-    { hiveNo: "", date: "", frames: 0, broodFrames: 0, openBrood: 0, sealedBrood: 0, notes: "" },
-  ]);
+  const [rows, setRows] = useState<HiveRow[]>(() => {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      return raw ? (JSON.parse(raw) as HiveRow[]) : DEFAULT_ROWS;
+    } catch {
+      return DEFAULT_ROWS;
+    }
+  });
   const fileRef = useRef<HTMLInputElement>(null);
 
   const updateRow = <K extends keyof HiveRow>(i: number, k: K, v: HiveRow[K]) => {
@@ -54,6 +65,24 @@ export default function HiveCardTable() {
       ...r,
       { hiveNo: "", date: "", frames: 0, broodFrames: 0, openBrood: 0, sealedBrood: 0, notes: "" },
     ]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(rows));
+    } catch {
+      /* ignore */
+    }
+  }, [rows]);
+
+  function handleClear() {
+    if (!confirm("Очистити всі рядки?")) return;
+    setRows([]);
+  }
+
+  function handleResetTemplate() {
+    if (!confirm("Повернути початковий шаблон?")) return;
+    setRows(DEFAULT_ROWS);
+  }
 
   function rowsToCSV(data: HiveRow[]): string {
     const header = [
@@ -198,6 +227,20 @@ export default function HiveCardTable() {
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Вуликова карта</h2>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="px-3 py-2 rounded-md border text-sm"
+            onClick={handleClear}
+          >
+            Очистити
+          </button>
+          <button
+            type="button"
+            className="px-3 py-2 rounded-md border text-sm"
+            onClick={handleResetTemplate}
+          >
+            Скинути до шаблону
+          </button>
           <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleImportFile} />
           <button
             type="button"
