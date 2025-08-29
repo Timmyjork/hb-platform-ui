@@ -4,7 +4,8 @@ import Select from "../components/ui/Select";
 import Button from "../components/ui/Button";
 import Toggle from "../components/ui/Toggle";
 import * as phenos from "../state/phenotypes";
-import { toCSV } from "../components/utils/csv";
+import { parseCSV, toCSV } from "../components/utils/csv";
+import { useToast } from "../components/ui/Toast";
 
 type Scale = 1 | 2 | 3 | 4 | 5;
 type Color = "light" | "yellow" | "dark" | "black";
@@ -65,6 +66,7 @@ export default function Phenotypes() {
   const [tab, setTab] = useState<"form" | "saved">("form");
   const [form, setForm] = useState<Draft>(emptyDraft);
   const [saved, setSaved] = useState<phenos.PhenotypeRecord[]>([]);
+  const { push } = useToast();
 
   useEffect(() => {
     try {
@@ -319,7 +321,11 @@ export default function Phenotypes() {
       </>)}
 
       {tab === "saved" && (
-        <SavedList records={saved} onExport={() => exportCSV(saved)} />
+        <SavedList
+          records={saved}
+          onExport={() => exportCSV(saved)}
+          onImport={(file) => handleImport(file, setSaved, push)}
+        />
       )}
     </div>
   );
@@ -373,12 +379,22 @@ function exportCSV(records: phenos.PhenotypeRecord[]) {
   URL.revokeObjectURL(url);
 }
 
-function SavedList({ records, onExport }: { records: phenos.PhenotypeRecord[]; onExport: () => void }) {
+function SavedList({ records, onExport, onImport }: { records: phenos.PhenotypeRecord[]; onExport: () => void; onImport: (file: File) => void }) {
+  const [inputId] = useState(() => `csv_${Math.random().toString(36).slice(2)}`);
+  const inputRef = React.useRef<HTMLInputElement>(null);
   return (
     <div className="mt-2">
       <div className="mb-2 flex items-center justify-between">
         <div className="text-sm font-medium">Збережені записи</div>
-        <Button onClick={onExport} disabled={records.length === 0}>Експорт CSV</Button>
+        <div className="flex items-center gap-2">
+          <input ref={inputRef} id={inputId} type="file" accept=".csv" className="hidden" onChange={(e) => {
+            const f = e.currentTarget.files?.[0];
+            if (f) onImport(f);
+            e.currentTarget.value = '';
+          }} />
+          <Button onClick={() => inputRef.current?.click()}>Імпорт CSV</Button>
+          <Button onClick={onExport} disabled={records.length === 0}>Експорт CSV</Button>
+        </div>
       </div>
       {records.length === 0 ? (
         <div className="text-sm text-[var(--secondary)]">Немає збережених записів</div>
@@ -406,4 +422,22 @@ function SavedList({ records, onExport }: { records: phenos.PhenotypeRecord[]; o
       )}
     </div>
   );
+}
+
+function handleImport(file: File, setSaved: React.Dispatch<React.SetStateAction<phenos.PhenotypeRecord[]>>, push: ReturnType<typeof useToast>["push"]) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const text = String(reader.result ?? '');
+      const rows = parseCSV(text);
+      const mapped = rows.map((r) => phenos.fromFlat(r as Record<string, string | number>));
+      const res = phenos.upsertMany(mapped);
+      setSaved(phenos.list());
+      push({ title: `Імпортовано: додано ${res.added}, оновлено ${res.updated}`, tone: 'success' });
+    } catch {
+      push({ title: 'Помилка імпорту CSV', tone: 'danger' });
+    }
+  };
+  reader.onerror = () => push({ title: 'Помилка читання файлу', tone: 'danger' });
+  reader.readAsText(file);
 }

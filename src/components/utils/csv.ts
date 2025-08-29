@@ -36,3 +36,63 @@ export function toCSV(rows: Record<string, unknown>[], separator = ','): string 
 
 export { flattenRow }
 
+// Simple CSV parser supporting separators and double-quote escaping
+function parseLine(line: string, sep: string): string[] {
+  const out: string[] = []
+  let cur = ''
+  let i = 0
+  let inQuotes = false
+  while (i < line.length) {
+    const ch = line[i]
+    if (inQuotes) {
+      if (ch === '"') {
+        // lookahead for escaped quote
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          cur += '"'
+          i += 2
+          continue
+        } else {
+          inQuotes = false
+          i++
+          continue
+        }
+      } else {
+        cur += ch
+        i++
+        continue
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true
+        i++
+        continue
+      }
+      if (ch === sep) {
+        out.push(cur)
+        cur = ''
+        i++
+        continue
+      }
+      cur += ch
+      i++
+    }
+  }
+  out.push(cur)
+  return out
+}
+
+export function parseCSV(text: string, separator = ','): Record<string, string>[] {
+  const lines = text.replace(/\r\n?/g, '\n').split('\n').filter((l) => l.length > 0)
+  if (lines.length === 0) return []
+  const header = parseLine(lines[0], separator)
+  const rows: Record<string, string>[] = []
+  for (let li = 1; li < lines.length; li++) {
+    const cols = parseLine(lines[li], separator)
+    const obj: Record<string, string> = {}
+    for (let ci = 0; ci < header.length; ci++) {
+      obj[header[ci]] = cols[ci] ?? ''
+    }
+    rows.push(obj)
+  }
+  return rows
+}
