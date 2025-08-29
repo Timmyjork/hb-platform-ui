@@ -29,6 +29,7 @@ const NAV_BY_ROLE: Record<string, { id: string; label: string }[]> = {
     { id: "dashboard", label: "Дашборд" },
     { id: "breeder_approvals", label: "Затвердження маткарів" },
     { id: "lines_populations", label: "Лінії та популяції" },
+    { id: "phenotypes", label: "Фенотипи" },
     { id: "reports", label: "Звіти" },
     { id: "settings", label: "Налаштування" },
   ],
@@ -175,8 +176,7 @@ export default function HBAppShell() {
             )}
 
             {/* Фенотипи */}
-            {(role === "breeder" && active === "phenotypes") && <Phenotypes />}
-            {(role === "buyer" && active === "phenotypes") && <Phenotypes />}
+            {active === "phenotypes" && <Phenotypes />}
 
             {/* Плейсхолдер для решти */}
             {active === "settings" && (
