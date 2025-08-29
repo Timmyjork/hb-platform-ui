@@ -29,8 +29,8 @@ const NAV_BY_ROLE: Record<string, { id: string; label: string }[]> = {
     { id: "dashboard", label: "Дашборд" },
     { id: "breeder_approvals", label: "Затвердження маткарів" },
     { id: "lines_populations", label: "Лінії та популяції" },
-    { id: "phenotypes", label: "Фенотипи" },
     { id: "reports", label: "Звіти" },
+    { id: "phenotypes", label: "Фенотипи" },
     { id: "settings", label: "Налаштування" },
   ],
   breeder: [
