@@ -331,12 +331,19 @@ export default function Phenotypes() {
   );
 }
 
-function validate(f: Draft) {
-  const e: any = { morphology: {}, behavior: {}, productivity: {} } as {
-    morphology: Partial<Record<keyof Draft["morphology"], string>>;
-    behavior: Partial<Record<keyof Draft["behavior"], string>>;
-    productivity: Partial<Record<keyof Draft["productivity"], string>>;
-  };
+type SectionErrors<T> = Partial<Record<keyof T, string>>;
+type Errors = {
+  morphology?: SectionErrors<Draft["morphology"]>;
+  behavior?: SectionErrors<Draft["behavior"]>;
+  productivity?: SectionErrors<Draft["productivity"]>;
+};
+
+function validate(f: Draft): Errors {
+  const e: {
+    morphology: SectionErrors<Draft["morphology"]>;
+    behavior: SectionErrors<Draft["behavior"]>;
+    productivity: SectionErrors<Draft["productivity"]>;
+  } = { morphology: {}, behavior: {}, productivity: {} };
 
   if (!(f.morphology.lengthMm >= 5 && f.morphology.lengthMm <= 30)) e.morphology.lengthMm = "5–30 мм";
   if (!f.morphology.color) e.morphology.color = "Оберіть колір";
@@ -358,11 +365,11 @@ function validate(f: Draft) {
   if (f.productivity.springDev && !(f.productivity.springDev >= 1 && f.productivity.springDev <= 5)) e.productivity.springDev = "1–5";
 
   // remove empty sections
-  (Object.keys(e) as (keyof typeof e)[]).forEach((k) => {
-    if (Object.keys(e[k]).length === 0) delete e[k];
-  });
-
-  return e as Partial<Record<keyof Draft, any>>;
+  const out: Errors = {};
+  if (Object.keys(e.morphology).length) out.morphology = e.morphology;
+  if (Object.keys(e.behavior).length) out.behavior = e.behavior;
+  if (Object.keys(e.productivity).length) out.productivity = e.productivity;
+  return out;
 }
 
 function exportCSV(records: phenos.PhenotypeRecord[]) {

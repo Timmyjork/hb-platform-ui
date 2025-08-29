@@ -5,6 +5,7 @@ import type { Row as QueenRow } from "./components/table/DataTable";
 import Button from "./components/ui/Button";
 import BeekeeperQueens from "./pages/BeekeeperQueens";
 import Phenotypes from "./pages/Phenotypes";
+import HiveCard from "./pages/HiveCard";
 
 // ——— Ролі
 const ROLES = [
@@ -39,6 +40,7 @@ const NAV_BY_ROLE: Record<string, { id: string; label: string }[]> = {
     { id: "drones", label: "МПТ (трутневі)" },
     { id: "traits", label: "Ознаки (Traits)" },
     { id: "phenotypes", label: "Фенотипи" },
+    { id: "hive_card", label: "Вуликові карти" },
     { id: "pairing", label: "Підбір пар" },
     { id: "plans", label: "Плани спарювання" },
     { id: "analytics", label: "Аналітика" },
@@ -48,6 +50,7 @@ const NAV_BY_ROLE: Record<string, { id: string; label: string }[]> = {
   buyer: [
     { id: "catalog", label: "Каталог" },
     { id: "phenotypes", label: "Фенотипи" },
+    { id: "hive_card", label: "Вуликові карти" },
     { id: "orders", label: "Замовлення" },
     { id: "profile", label: "Профіль" },
     { id: "analytics", label: "Аналітика" },
@@ -177,6 +180,9 @@ export default function HBAppShell() {
 
             {/* Фенотипи */}
             {active === "phenotypes" && <Phenotypes />}
+
+            {/* Вуликові карти */}
+            {active === "hive_card" && <HiveCard />}
 
             {/* Плейсхолдер для решти */}
             {active === "settings" && (
