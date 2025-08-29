@@ -30,6 +30,7 @@ function downloadCSV(filename: string, csv: string) {
 }
 
 export interface HiveRow {
+  id: string; // унікальний ключ
   hiveNo: string; // Вулик №
   date: string; // yyyy-mm-dd
   frames: number; // Зайняті рамки
@@ -39,9 +40,20 @@ export interface HiveRow {
   notes: string; // Примітка
 }
 
-const DEFAULT_ROWS: HiveRow[] = [
-  { hiveNo: "", date: "", frames: 0, broodFrames: 0, openBrood: 0, sealedBrood: 0, notes: "" },
-];
+function makeEmptyRow(): HiveRow {
+  return {
+    id: `row-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    hiveNo: "",
+    date: "",
+    frames: 0,
+    broodFrames: 0,
+    openBrood: 0,
+    sealedBrood: 0,
+    notes: "",
+  };
+}
+
+const DEFAULT_ROWS: HiveRow[] = [makeEmptyRow()];
 
 const LS_KEY = "hiveCard.rows.v1" as const;
 
@@ -49,22 +61,37 @@ export default function HiveCardTable() {
   const [rows, setRows] = useState<HiveRow[]>(() => {
     try {
       const raw = localStorage.getItem(LS_KEY);
-      return raw ? (JSON.parse(raw) as HiveRow[]) : DEFAULT_ROWS;
+      if (!raw) return DEFAULT_ROWS;
+      const parsed = JSON.parse(raw) as Partial<HiveRow>[];
+      return parsed.map((r, i) => ({
+        id:
+          r && typeof r.id === "string" && r.id.length
+            ? r.id
+            : `row-${Date.now()}-${i}`,
+        hiveNo: String(r?.hiveNo ?? ""),
+        date: String(r?.date ?? ""),
+        frames: Number(r?.frames ?? 0),
+        broodFrames: Number(r?.broodFrames ?? 0),
+        openBrood: Number(r?.openBrood ?? 0),
+        sealedBrood: Number(r?.sealedBrood ?? 0),
+        notes: String(r?.notes ?? ""),
+      }));
     } catch {
       return DEFAULT_ROWS;
     }
   });
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const updateRow = <K extends keyof HiveRow>(i: number, k: K, v: HiveRow[K]) => {
-    setRows((prev) => prev.map((row, idx) => (idx === i ? { ...row, [k]: v } as HiveRow : row)));
-  };
+  function updateCell<K extends keyof HiveRow>(id: string, key: K, value: HiveRow[K]) {
+    setRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, [key]: value } as HiveRow : r))
+    );
+  }
 
-  const addRow = () =>
-    setRows((r) => [
-      ...r,
-      { hiveNo: "", date: "", frames: 0, broodFrames: 0, openBrood: 0, sealedBrood: 0, notes: "" },
-    ]);
+  function addRow() {
+    const newRow = makeEmptyRow();
+    setRows((prev) => [newRow, ...prev]);
+  }
 
   useEffect(() => {
     try {
@@ -201,7 +228,10 @@ export default function HiveCardTable() {
         const key = (r: HiveRow) => `${r.hiveNo}#${r.date}`;
         const map = new Map(prev.map((r) => [key(r), r] as const));
         for (const r of parsed) {
+          const k = `${r.hiveNo}#${r.date}`;
+          const existing = map.get(k);
           const nr: HiveRow = {
+            id: existing?.id ?? k,
             hiveNo: r.hiveNo,
             date: r.date,
             frames: r.occupied,
@@ -210,7 +240,7 @@ export default function HiveCardTable() {
             sealedBrood: r.sealed,
             notes: r.note,
           };
-          map.set(key(nr), { ...(map.get(key(nr)) ?? nr), ...nr });
+          map.set(k, { ...(existing ?? nr), ...nr });
         }
         return Array.from(map.values());
       });
@@ -227,6 +257,13 @@ export default function HiveCardTable() {
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Вуликова карта</h2>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="px-3 py-2 rounded-md border text-sm"
+            onClick={addRow}
+          >
+            Додати рядок
+          </button>
           <button
             type="button"
             className="px-3 py-2 rounded-md border text-sm"
@@ -285,61 +322,80 @@ export default function HiveCardTable() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => (
-              <tr key={i} className="border-t hover:bg-gray-50">
-                <td className="px-3 py-2">
+            {rows.map((row) => (
+              <tr key={row.id} className="border-t border-[var(--divider)] hover:bg-gray-50">
+                <td className="p-2">
                   <input
-                    className="w-full rounded border border-[var(--divider)] bg-[var(--surface)] px-2 py-1"
-                    value={r.hiveNo}
-                    onChange={(e) => updateRow(i, "hiveNo", e.target.value)}
+                    className="w-full rounded-md border px-2 py-1 text-sm"
+                    value={row.hiveNo}
+                    onChange={(e) => updateCell(row.id, "hiveNo", e.target.value)}
+                    placeholder="№"
                   />
                 </td>
-                <td className="px-3 py-2">
+                <td className="p-2">
                   <input
                     type="date"
-                    className="w-full rounded border border-[var(--divider)] bg-[var(--surface)] px-2 py-1"
-                    value={r.date}
-                    onChange={(e) => updateRow(i, "date", e.target.value)}
+                    className="w-full rounded-md border px-2 py-1 text-sm"
+                    value={row.date}
+                    onChange={(e) => updateCell(row.id, "date", e.target.value)}
                   />
                 </td>
-                <td className="px-3 py-2">
+                <td className="p-2">
                   <input
                     type="number"
-                    className="w-full rounded border border-[var(--divider)] bg-[var(--surface)] px-2 py-1"
-                    value={r.frames}
-                    onChange={(e) => updateRow(i, "frames", Number(e.target.value))}
+                    inputMode="numeric"
+                    className="w-full rounded-md border px-2 py-1 text-sm"
+                    value={row.frames}
+                    onChange={(e) => updateCell(row.id, "frames", Number(e.target.value || 0))}
                   />
                 </td>
-                <td className="px-3 py-2">
+                <td className="p-2">
                   <input
                     type="number"
-                    className="w-full rounded border border-[var(--divider)] bg-[var(--surface)] px-2 py-1"
-                    value={r.broodFrames}
-                    onChange={(e) => updateRow(i, "broodFrames", Number(e.target.value))}
+                    inputMode="numeric"
+                    className="w-full rounded-md border px-2 py-1 text-sm"
+                    value={row.broodFrames}
+                    onChange={(e) => updateCell(row.id, "broodFrames", Number(e.target.value || 0))}
                   />
                 </td>
-                <td className="px-3 py-2">
+                <td className="p-2">
                   <input
                     type="number"
-                    className="w-full rounded border border-[var(--divider)] bg-[var(--surface)] px-2 py-1"
-                    value={r.openBrood}
-                    onChange={(e) => updateRow(i, "openBrood", Number(e.target.value))}
+                    inputMode="numeric"
+                    className="w-full rounded-md border px-2 py-1 text-sm"
+                    value={row.openBrood}
+                    onChange={(e) => updateCell(row.id, "openBrood", Number(e.target.value || 0))}
                   />
                 </td>
-                <td className="px-3 py-2">
+                <td className="p-2">
                   <input
                     type="number"
-                    className="w-full rounded border border-[var(--divider)] bg-[var(--surface)] px-2 py-1"
-                    value={r.sealedBrood}
-                    onChange={(e) => updateRow(i, "sealedBrood", Number(e.target.value))}
+                    inputMode="numeric"
+                    className="w-full rounded-md border px-2 py-1 text-sm"
+                    value={row.sealedBrood}
+                    onChange={(e) => updateCell(row.id, "sealedBrood", Number(e.target.value || 0))}
                   />
                 </td>
-                <td className="px-3 py-2">
+                <td className="p-2">
                   <textarea
-                    className="w-full rounded border border-[var(--divider)] bg-[var(--surface)] px-2 py-1"
-                    value={r.notes}
-                    onChange={(e) => updateRow(i, "notes", e.target.value)}
+                    rows={1}
+                    className="w-full rounded-md border px-2 py-1 text-sm"
+                    value={row.notes}
+                    onChange={(e) => updateCell(row.id, "notes", e.target.value)}
+                    placeholder="Коментарі..."
                   />
+                </td>
+                <td className="p-2 text-right">
+                  <button
+                    type="button"
+                    className="px-2 py-1 rounded-md border text-sm"
+                    onClick={() => {
+                      if (!confirm("Видалити рядок?")) return;
+                      setRows((prev) => prev.filter((r) => r.id !== row.id));
+                    }}
+                  >
+                    Видалити
+                  </button>
                 </td>
               </tr>
             ))}
