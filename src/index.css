@@ -1,0 +1,18 @@
+/* src/index.css */
+@import "tailwindcss";
+
+/* Дизайн-токени і твої кастомні стилі нижче — ок */
+:root{
+  --primary:#0EA5E9;
+  --text:#0F172A;
+  --secondary:#6B7280;
+  --bg:#F6F7F9;
+  --surface:#FFFFFF;
+  --divider:#E5E7EB;
+  --success:#22C55E;
+  --warning:#F59E0B;
+  --danger:#EF4444;
+  --info:#3B82F6;
+}
+html, body, #root { height: 100%; }
+body { color: var(--text); background: var(--bg); }
