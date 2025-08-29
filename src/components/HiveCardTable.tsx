@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import * as XLSX from "xlsx";
 
 const CSV_HEADERS = [
   "Вулик №",
@@ -10,6 +11,83 @@ const CSV_HEADERS = [
   "Примітка",
 ] as const;
 const CSV_HEADER = CSV_HEADERS;
+
+// XLSX columns mapping for current table shape
+const XLSX_COLUMNS: ReadonlyArray<{ key: keyof HiveRow; header: string }> = [
+  { key: "hiveNo", header: "Вулик №" },
+  { key: "date", header: "Дата" },
+  { key: "frames", header: "Зайняті рамки" },
+  { key: "broodFrames", header: "Рамки розплоду" },
+  { key: "openBrood", header: "Відкр." },
+  { key: "sealedBrood", header: "Закр." },
+  { key: "notes", header: "Примітка" },
+] as const;
+
+function rowsToWorksheet(rows: HiveRow[]) {
+  const data = [
+    XLSX_COLUMNS.map((c) => c.header),
+    ...rows.map((r) => XLSX_COLUMNS.map((c) => (r[c.key] as unknown) ?? "")),
+  ];
+  return XLSX.utils.aoa_to_sheet(data);
+}
+
+function worksheetToRows(ws: XLSX.WorkSheet): HiveRow[] {
+  const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" });
+  if (!aoa.length) return [];
+  const headerRow = (aoa[0] as unknown[]).map((h) => String(h).trim().toLowerCase());
+  const mapIndexToKey = headerRow.map((h) => {
+    const col = XLSX_COLUMNS.find((c) => c.header.toLowerCase() === h || (c.key as string) === h);
+    return col?.key as keyof HiveRow | undefined;
+  });
+
+  const out: HiveRow[] = [];
+  for (let i = 1; i < aoa.length; i++) {
+    const row = aoa[i] as unknown[];
+    if (!row || row.every((cell) => String(cell).trim() === "")) continue;
+    const obj: Partial<HiveRow> = { id: `row-${Date.now()}-${i}` };
+    mapIndexToKey.forEach((key, idx) => {
+      if (!key) return;
+      const raw = row[idx];
+      switch (key) {
+        case "frames":
+          obj.frames = Number(String(raw).trim() || 0);
+          break;
+        case "broodFrames":
+          obj.broodFrames = Number(String(raw).trim() || 0);
+          break;
+        case "openBrood":
+          obj.openBrood = Number(String(raw).trim() || 0);
+          break;
+        case "sealedBrood":
+          obj.sealedBrood = Number(String(raw).trim() || 0);
+          break;
+        case "hiveNo":
+          obj.hiveNo = String(raw);
+          break;
+        case "date":
+          obj.date = String(raw);
+          break;
+        case "notes":
+          obj.notes = String(raw);
+          break;
+        case "id":
+          obj.id = String(raw);
+          break;
+        default:
+          break;
+      }
+    });
+    obj.hiveNo ??= "";
+    obj.date ??= "";
+    obj.frames = Number.isFinite(obj.frames as number) ? (obj.frames as number) : 0;
+    obj.broodFrames = Number.isFinite(obj.broodFrames as number) ? (obj.broodFrames as number) : 0;
+    obj.openBrood = Number.isFinite(obj.openBrood as number) ? (obj.openBrood as number) : 0;
+    obj.sealedBrood = Number.isFinite(obj.sealedBrood as number) ? (obj.sealedBrood as number) : 0;
+    obj.notes ??= "";
+    out.push(obj as HiveRow);
+  }
+  return out;
+}
 
 function toCSV(rows: number) {
   const header = CSV_HEADERS.join(",");
@@ -148,6 +226,34 @@ export default function HiveCardTable() {
     downloadCSV(`hive-card-${yyyy}-${mm}-${dd}.csv`, csv);
   }
 
+  // XLSX export/import handlers
+  function exportXLSX(filename = "hive-card.xlsx") {
+    const wb = XLSX.utils.book_new();
+    const ws = rowsToWorksheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, "HiveCard");
+    XLSX.writeFile(wb, filename);
+  }
+
+  function downloadTemplateXLSX(filename = "hive-card-template.xlsx") {
+    const wb = XLSX.utils.book_new();
+    const ws = rowsToWorksheet([makeEmptyRow()]);
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, filename);
+  }
+
+  function importXLSX(file: File, mode: "replace" | "append" = "append") {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = new Uint8Array((e.target?.result as ArrayBuffer) || new ArrayBuffer(0));
+      const wb = XLSX.read(data, { type: "array" });
+      const sheetName = wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const parsed = worksheetToRows(ws);
+      setRows((prev) => (mode === "replace" ? parsed : [...prev, ...parsed]));
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
   type CsvRow = {
     hiveNo: string;
     date: string; // YYYY-MM-DD
@@ -256,7 +362,7 @@ export default function HiveCardTable() {
     <div className="p-4 rounded-xl border border-[var(--divider)] bg-[var(--surface)] shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Вуликова карта</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             className="px-3 py-2 rounded-md border text-sm"
@@ -293,6 +399,33 @@ export default function HiveCardTable() {
           >
             Експорт у CSV
           </button>
+          <button
+            type="button"
+            className="px-3 py-2 rounded-md border text-sm"
+            onClick={() => downloadTemplateXLSX()}
+          >
+            Скачати шаблон (XLSX)
+          </button>
+          <button
+            type="button"
+            className="px-3 py-2 rounded-md border text-sm"
+            onClick={() => exportXLSX()}
+          >
+            Експорт XLSX
+          </button>
+          <label className="px-3 py-2 rounded-md border text-sm cursor-pointer">
+            Імпорт XLSX
+            <input
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) importXLSX(f, "append");
+                e.currentTarget.value = "";
+              }}
+            />
+          </label>
           <button
             type="button"
             className="px-3 py-2 rounded-md bg-[var(--primary)] text-white text-sm"
