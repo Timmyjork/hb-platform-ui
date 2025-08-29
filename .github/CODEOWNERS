@@ -12,3 +12,22 @@ src/auth/ @Timmyjork
 src/assets/ @Timmyjork
 public/ @Timmyjork
 .github/workflows/ @Timmyjork
+
+# Tooling
+package.json @Timmyjork
+vite.config.ts @Timmyjork
+eslint.config.js @Timmyjork
+tailwind.config.js @Timmyjork
+tsconfig.json @Timmyjork
+tsconfig.app.json @Timmyjork
+tsconfig.node.json @Timmyjork
+postcss.config.js @Timmyjork
+
+# Documentation & GitHub config
+README.md @Timmyjork
+AGENTS.md @Timmyjork
+.github/BRANCH_PROTECTION.md @Timmyjork
+.github/ @Timmyjork
+
+# Root app files
+index.html @Timmyjork
