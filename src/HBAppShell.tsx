@@ -6,6 +6,7 @@ import Button from "./components/ui/Button";
 import BeekeeperQueens from "./pages/BeekeeperQueens";
 import Phenotypes from "./pages/Phenotypes";
 import HiveCard from "./pages/HiveCard";
+import Analytics from "./pages/Analytics";
 
 // ——— Ролі
 const ROLES = [
@@ -183,6 +184,9 @@ export default function HBAppShell() {
 
             {/* Вуликові карти */}
             {active === "hive_card" && <HiveCard />}
+
+            {/* Аналітика */}
+            {active === "analytics" && <Analytics />}
 
             {/* Плейсхолдер для решти */}
             {active === "settings" && (
