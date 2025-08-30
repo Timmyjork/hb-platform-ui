@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { getPhenotypes, getHiveCards, calcPhenotypeKPI, calcHiveKPI, seriesByMonth } from "../state/analytics";
+import { getPhenotypes, getHiveCards, calcPhenotypeKPI, calcHiveKPI, seriesByMonth, filterByDate } from "../state/analytics";
 import type { PhenotypeEntry, HiveCardEntry } from "../state/analytics";
 import { exportCSV, exportXLSX } from "../utils/export";
 import InfoTooltip from "../components/ui/InfoTooltip";
@@ -37,27 +37,41 @@ export default function Analytics() {
   const phenos = useMemo(() => getPhenotypes(), []);
   const hives = useMemo(() => getHiveCards(), []);
 
-  const phKPI = useMemo(() => calcPhenotypeKPI(phenos), [phenos]);
-  const hcKPI = useMemo(() => calcHiveKPI(hives), [hives]);
+  // Date range (last 6 months by default)
+  const now = new Date();
+  const defTo = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const tmp = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  const defFrom = `${tmp.getFullYear()}-${String(tmp.getMonth() + 1).padStart(2, '0')}`;
+  const [fromMonth, setFromMonth] = useState(defFrom);
+  const [toMonth, setToMonth] = useState(defTo);
+
+  const fromDate = useMemo(() => monthToStart(fromMonth), [fromMonth]);
+  const toDate = useMemo(() => monthToEnd(toMonth), [toMonth]);
+
+  const phenosFiltered = useMemo(() => filterByDate(phenos, fromDate, toDate), [phenos, fromDate, toDate]);
+  const hivesFiltered = useMemo(() => filterByDate(hives, fromDate, toDate), [hives, fromDate, toDate]);
+
+  const phKPI = useMemo(() => calcPhenotypeKPI(phenosFiltered), [phenosFiltered]);
+  const hcKPI = useMemo(() => calcHiveKPI(hivesFiltered), [hivesFiltered]);
 
   const phMonthly = useMemo(() => seriesByMonth<PhenotypeEntry>(
-    phenos,
+    phenosFiltered,
     (e) => e.date,
     {
       eggs: (arr) => avg(arr.map((e) => e.eggsPerDay ?? 0)),
       hygiene: (arr) => avg(arr.map((e) => e.hygienePct ?? 0)),
     }
-  ), [phenos]);
+  ), [phenosFiltered]);
 
   const hcMonthly = useMemo(() => seriesByMonth<HiveCardEntry>(
-    hives,
+    hivesFiltered,
     (e) => e.date,
     {
       frames: (arr) => avg(arr.map((e) => e.framesOccupied)),
       open: (arr) => avg(arr.map((e) => e.broodOpen)),
       capped: (arr) => avg(arr.map((e) => e.broodCapped)),
     }
-  ), [hives]);
+  ), [hivesFiltered]);
 
   function avg(vs: number[]) { return vs.length ? vs.reduce((s, v) => s + v, 0) / vs.length : 0; }
 
@@ -72,7 +86,7 @@ export default function Analytics() {
     exportXLSX('analytics.xlsx', { PhenotypesMonthly: phRows, HiveMonthly: hcRows });
   }
 
-  const empty = phenos.length === 0 && hives.length === 0;
+  const empty = phenosFiltered.length === 0 && hivesFiltered.length === 0;
 
   return (
     <div className="p-4">
@@ -84,6 +98,13 @@ export default function Analytics() {
           <button className="rounded-md border px-3 py-1.5 text-sm" onClick={exportAllCSV}>Експорт аналітики (CSV)</button>
           <button className="rounded-md border px-3 py-1.5 text-sm" onClick={exportAllXLSX}>Експорт аналітики (XLSX)</button>
         </div>
+      </div>
+
+      <div className="mb-3 flex items-center gap-2">
+        <span className="text-sm text-[var(--secondary)]">Період:</span>
+        <input aria-label="Від місяця" type="month" value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} className="rounded-md border px-2 py-1 text-sm" />
+        <span className="text-sm">—</span>
+        <input aria-label="До місяця" type="month" value={toMonth} onChange={(e) => setToMonth(e.target.value)} className="rounded-md border px-2 py-1 text-sm" />
       </div>
 
       {empty && (
@@ -126,6 +147,9 @@ export default function Analytics() {
 
       {!empty && tab === 'phenotypes' && (
         <div className="space-y-4">
+          {phenosFiltered.length === 0 && (
+            <div className="rounded-md border border-[var(--divider)] bg-[var(--surface)] p-4 text-sm text-[var(--secondary)]">Немає записів за обраний період</div>
+          )}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <KPIStat label="Маток (унік.)" value={phKPI.countQueens} />
             <KPIStat label="Сер. яєць/добу" value={phKPI.avgEggsPerDay} />
@@ -161,6 +185,9 @@ export default function Analytics() {
 
       {!empty && tab === 'hive' && (
         <div className="space-y-4">
+          {hivesFiltered.length === 0 && (
+            <div className="rounded-md border border-[var(--divider)] bg-[var(--surface)] p-4 text-sm text-[var(--secondary)]">Немає записів за обраний період</div>
+          )}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <KPIStat label="Колоній (унік.)" value={hcKPI.countColonies} />
             <KPIStat label="Сер. зайняті рамки" value={hcKPI.avgFramesOccupied} />
@@ -195,4 +222,16 @@ export default function Analytics() {
       )}
     </div>
   );
+}
+
+function monthToStart(s: string | undefined): Date | undefined {
+  if (!s) return undefined;
+  const [y, m] = s.split('-').map(Number);
+  if (!y || !m) return undefined;
+  return new Date(y, m - 1, 1, 0, 0, 0, 0);
+}
+function monthToEnd(s: string | undefined): Date | undefined {
+  const start = monthToStart(s);
+  if (!start) return undefined;
+  return new Date(start.getFullYear(), start.getMonth() + 1, 0, 23, 59, 59, 999);
 }

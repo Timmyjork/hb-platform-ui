@@ -219,3 +219,13 @@ export function distribution<T extends Record<string, unknown>>(
     .map(([bucket, count]) => ({ bucket, count }))
   return buckets
 }
+
+export function filterByDate<T extends { date: Date }>(rows: T[], from?: Date, to?: Date): T[] {
+  return rows.filter((r) => {
+    const t = r.date.getTime()
+    if (isNaN(t)) return false
+    if (from && t < from.getTime()) return false
+    if (to && t > to.getTime()) return false
+    return true
+  })
+}
