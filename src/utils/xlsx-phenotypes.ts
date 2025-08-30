@@ -99,6 +99,37 @@ export function downloadPhenotypesTemplate(filename = "phenotypes-template.xlsx"
   XLSX.writeFile(wb, filename);
 }
 
+export function exportPhenotypesXLSX(rows: PhenotypeRow[], filename = "phenotypes-export.xlsx") {
+  const data: (string | number)[][] = [[...P_HEADERS]];
+  for (const r of rows) {
+    data.push([
+      r.queen_id ?? "",
+      r.date ?? "",
+      r.length_mm ?? "",
+      r.mass_pre_mg ?? "",
+      r.mass_post_mg ?? "",
+      r.color ?? "",
+      r.abdomen_shape ?? "",
+      r.symmetry_ok ?? "",
+      r.symmetry_note ?? "",
+      r.aggression ?? "",
+      r.swarming ?? "",
+      r.hygiene_pct ?? "",
+      r.winter_hardiness ?? "",
+      r.egg_prod ?? "",
+      r.brood_density ?? "",
+      r.honey_kg ?? "",
+      r.winter_feed_kg ?? "",
+      r.spring_dev ?? "",
+      r.note ?? "",
+    ]);
+  }
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb, ws, "Phenotypes");
+  XLSX.writeFile(wb, filename);
+}
+
 export function parsePhenotypesXLSX(file: File): Promise<PhenotypeRow[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -162,4 +193,3 @@ function toInt(v: unknown) {
 function toStr(v: unknown) {
   return v == null ? "" : String(v).trim();
 }
-

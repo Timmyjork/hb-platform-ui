@@ -5,7 +5,7 @@ import Button from "../components/ui/Button";
 import Toggle from "../components/ui/Toggle";
 import * as phenos from "../state/phenotypes";
 import { parseCSV, toCSV } from "../components/utils/csv";
-import { downloadPhenotypesTemplate, parsePhenotypesXLSX, type PhenotypeRow } from "../utils/xlsx-phenotypes";
+import { downloadPhenotypesTemplate, parsePhenotypesXLSX, exportPhenotypesXLSX, type PhenotypeRow } from "../utils/xlsx-phenotypes";
 import { useToast } from "../components/ui/Toast";
 
 type Scale = 1 | 2 | 3 | 4 | 5;
@@ -132,6 +132,7 @@ export default function Phenotypes() {
       <div className="mb-3 flex items-center gap-2">
         <Button onClick={() => downloadPhenotypesTemplate()}>Скачати шаблон XLSX</Button>
         <Button variant="secondary" onClick={() => xlsxInputRef.current?.click()}>Імпорт XLSX</Button>
+        <Button variant="secondary" onClick={() => exportPhenotypesXLSX(imported)}>Експорт XLSX</Button>
         <input
           ref={xlsxInputRef}
           type="file"
