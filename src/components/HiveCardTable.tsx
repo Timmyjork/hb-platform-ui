@@ -24,13 +24,7 @@ const XLSX_COLUMNS: ReadonlyArray<{ key: keyof HiveRow; header: string }> = [
   { key: "notes", header: "Примітка" },
 ] as const;
 
-function rowsToWorksheet(rows: HiveRow[]) {
-  const data = [
-    XLSX_COLUMNS.map((c) => c.header),
-    ...rows.map((r) => XLSX_COLUMNS.map((c) => (r[c.key] as unknown) ?? "")),
-  ];
-  return XLSX.utils.aoa_to_sheet(data);
-}
+// rowsToWorksheet no longer needed (export uses shared util)
 
 function worksheetToRows(ws: XLSX.WorkSheet): HiveRow[] {
   const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" });
@@ -243,8 +237,22 @@ export default function HiveCardTable() {
 
   function downloadTemplateXLSX(filename = "hive-card-template.xlsx") {
     const wb = XLSX.utils.book_new();
-    const ws = rowsToWorksheet([makeEmptyRow()]);
-    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    const headers = XLSX_COLUMNS.map((c) => c.header);
+    const wsMain = XLSX.utils.aoa_to_sheet([headers]);
+    XLSX.utils.book_append_sheet(wb, wsMain, "Вуликова карта");
+
+    const H_GUIDE: [string, string, string][] = [
+      ["Вулик №", "Ідентифікатор/назва вулика", "A-12"],
+      ["Дата", "Формат YYYY-MM-DD", "2025-08-29"],
+      ["Зайняті рамки", "К-ть рамок зайняті бджолами (ціле число)", "8"],
+      ["Рамки розплоду", "Загальна к-ть рамок з розплодом (ціле)", "4"],
+      ["Відкр.", "Відкритий розплід (яйця/личинки), рамки (ціле)", "2"],
+      ["Закр.", "Запечатаний розплід, рамки (ціле)", "2"],
+      ["Примітка", "Вільний текст, коротко", "Підсилено 1 рамкою меду"],
+    ];
+    const guideAoA: (string | number)[][] = [["Поле", "Правило", "Приклад"], ...H_GUIDE];
+    const wsGuide = XLSX.utils.aoa_to_sheet(guideAoA);
+    XLSX.utils.book_append_sheet(wb, wsGuide, "Пояснення");
     XLSX.writeFile(wb, filename);
   }
 
