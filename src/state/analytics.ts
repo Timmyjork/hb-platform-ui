@@ -6,6 +6,8 @@ export type PhenotypeEntry = {
   queenId: string
   colonyId?: string
   date: Date
+  breed?: string
+  status?: string
   // Morphology
   lengthMm?: number
   massPreMg?: number
@@ -30,6 +32,8 @@ export type HiveCardEntry = {
   id: string
   colonyId: string
   date: Date
+  breed?: string
+  status?: string
   framesOccupied: number
   broodOpen: number
   broodCapped: number
@@ -85,6 +89,8 @@ function normalizePhenotype(it: unknown, idx = 0): PhenotypeEntry {
     queenId,
     colonyId,
     date: parseDate(dateRaw),
+    breed: s(o['breed']),
+    status: s(o['status']),
     lengthMm: toNum(morph['lengthMm'] ?? o['length_mm']),
     massPreMg: toNum(morph['massPreMg'] ?? o['mass_pre_mg']),
     massPostMg: toNum(morph['massPostMg'] ?? o['mass_post_mg']),
@@ -120,6 +126,8 @@ function normalizeHiveCard(it: unknown, idx = 0): HiveCardEntry {
   const id = String(o['id'] ?? `hc_${idx}`)
   const colonyId = s(o['colonyId'] ?? o['hiveNo'] ?? '')
   const dateRaw = o['date']
+  const breed = s(o['breed'])
+  const status = s(o['status'])
   const framesOccupied = Number(o['frames'] ?? o['framesOccupied'] ?? 0) || 0
   const broodOpen = Number(o['openBrood'] ?? o['broodOpen'] ?? 0) || 0
   const broodCapped = Number(o['sealedBrood'] ?? o['broodCapped'] ?? 0) || 0
@@ -128,6 +136,8 @@ function normalizeHiveCard(it: unknown, idx = 0): HiveCardEntry {
     id,
     colonyId,
     date: parseDate(dateRaw),
+    breed,
+    status,
     framesOccupied,
     broodOpen,
     broodCapped,
@@ -227,5 +237,24 @@ export function filterByDate<T extends { date: Date }>(rows: T[], from?: Date, t
     if (from && t < from.getTime()) return false
     if (to && t > to.getTime()) return false
     return true
+  })
+}
+
+export function uniqueValues<T extends Record<string, unknown>, K extends keyof T>(rows: T[], key: K): string[] {
+  const set = new Set<string>()
+  for (const r of rows) {
+    const v = r[key]
+    if (typeof v === 'string' && v.trim().length) set.add(v)
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b))
+}
+
+export function applySegments<T extends { breed?: string; status?: string }>(rows: T[], seg: { breeds?: string[]; statuses?: string[] }): T[] {
+  const bset = new Set((seg.breeds ?? []).filter(Boolean))
+  const sset = new Set((seg.statuses ?? []).filter(Boolean))
+  return rows.filter((r) => {
+    const okBreed = bset.size ? (r.breed ? bset.has(r.breed) : false) : true
+    const okStatus = sset.size ? (r.status ? sset.has(r.status) : false) : true
+    return okBreed && okStatus
   })
 }

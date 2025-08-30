@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { getPhenotypes, getHiveCards, calcPhenotypeKPI, calcHiveKPI, seriesByMonth, filterByDate } from "../state/analytics";
+import { getPhenotypes, getHiveCards, calcPhenotypeKPI, calcHiveKPI, seriesByMonth, filterByDate, uniqueValues, applySegments } from "../state/analytics";
 import type { PhenotypeEntry, HiveCardEntry } from "../state/analytics";
 import { exportCSV, exportXLSX } from "../utils/export";
 import InfoTooltip from "../components/ui/InfoTooltip";
@@ -51,27 +51,72 @@ export default function Analytics() {
   const phenosFiltered = useMemo(() => filterByDate(phenos, fromDate, toDate), [phenos, fromDate, toDate]);
   const hivesFiltered = useMemo(() => filterByDate(hives, fromDate, toDate), [hives, fromDate, toDate]);
 
-  const phKPI = useMemo(() => calcPhenotypeKPI(phenosFiltered), [phenosFiltered]);
-  const hcKPI = useMemo(() => calcHiveKPI(hivesFiltered), [hivesFiltered]);
+  // Segmentation state and available options
+  const breedOptions = useMemo(() => {
+    const a = uniqueValues<PhenotypeEntry, 'breed'>(phenosFiltered, 'breed')
+    const b = uniqueValues<HiveCardEntry, 'breed'>(hivesFiltered, 'breed')
+    return Array.from(new Set([...a, ...b])).sort((x, y) => x.localeCompare(y))
+  }, [phenosFiltered, hivesFiltered]);
+  const statusOptions = useMemo(() => {
+    const a = uniqueValues<PhenotypeEntry, 'status'>(phenosFiltered, 'status')
+    const b = uniqueValues<HiveCardEntry, 'status'>(hivesFiltered, 'status')
+    return Array.from(new Set([...a, ...b])).sort((x, y) => x.localeCompare(y))
+  }, [phenosFiltered, hivesFiltered]);
+  const [selBreeds, setSelBreeds] = useState<string[]>([]);
+  const [selStatuses, setSelStatuses] = useState<string[]>([]);
+  const [sources, setSources] = useState<{ phenotypes: boolean; hivecards: boolean }>({ phenotypes: true, hivecards: true });
+
+  // URL sync (mount -> state, state -> URL)
+  useMemo(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const uFrom = sp.get('from'); const uTo = sp.get('to');
+    const uBreeds = sp.get('breeds'); const uStatuses = sp.get('statuses'); const uSources = sp.get('sources');
+    if (uFrom) setFromMonth(uFrom);
+    if (uTo) setToMonth(uTo);
+    if (uBreeds) setSelBreeds(uBreeds.split(',').filter(Boolean));
+    if (uStatuses) setSelStatuses(uStatuses.split(',').filter(Boolean));
+    if (uSources) {
+      const parts = new Set(uSources.split(',').filter(Boolean));
+      setSources({ phenotypes: parts.has('phenotypes'), hivecards: parts.has('hivecards') });
+    }
+  }, []);
+
+  useMemo(() => {
+    const sp = new URLSearchParams();
+    if (fromMonth) sp.set('from', fromMonth);
+    if (toMonth) sp.set('to', toMonth);
+    if (selBreeds.length) sp.set('breeds', selBreeds.join(','));
+    if (selStatuses.length) sp.set('statuses', selStatuses.join(','));
+    const src: string[] = []; if (sources.phenotypes) src.push('phenotypes'); if (sources.hivecards) src.push('hivecards');
+    if (src.length) sp.set('sources', src.join(','));
+    const url = `${window.location.pathname}?${sp.toString()}`;
+    window.history.replaceState(null, '', url);
+  }, [fromMonth, toMonth, selBreeds, selStatuses, sources]);
+
+  const phenosSeg = useMemo(() => (sources.phenotypes ? applySegments(phenosFiltered, { breeds: selBreeds, statuses: selStatuses }) : []), [phenosFiltered, selBreeds, selStatuses, sources]);
+  const hivesSeg = useMemo(() => (sources.hivecards ? applySegments(hivesFiltered, { breeds: selBreeds, statuses: selStatuses }) : []), [hivesFiltered, selBreeds, selStatuses, sources]);
+
+  const phKPI = useMemo(() => calcPhenotypeKPI(phenosSeg), [phenosSeg]);
+  const hcKPI = useMemo(() => calcHiveKPI(hivesSeg), [hivesSeg]);
 
   const phMonthly = useMemo(() => seriesByMonth<PhenotypeEntry>(
-    phenosFiltered,
+    phenosSeg,
     (e) => e.date,
     {
       eggs: (arr) => avg(arr.map((e) => e.eggsPerDay ?? 0)),
       hygiene: (arr) => avg(arr.map((e) => e.hygienePct ?? 0)),
     }
-  ), [phenosFiltered]);
+  ), [phenosSeg]);
 
   const hcMonthly = useMemo(() => seriesByMonth<HiveCardEntry>(
-    hivesFiltered,
+    hivesSeg,
     (e) => e.date,
     {
       frames: (arr) => avg(arr.map((e) => e.framesOccupied)),
       open: (arr) => avg(arr.map((e) => e.broodOpen)),
       capped: (arr) => avg(arr.map((e) => e.broodCapped)),
     }
-  ), [hivesFiltered]);
+  ), [hivesSeg]);
 
   function avg(vs: number[]) { return vs.length ? vs.reduce((s, v) => s + v, 0) / vs.length : 0; }
 
@@ -86,7 +131,7 @@ export default function Analytics() {
     exportXLSX('analytics.xlsx', { PhenotypesMonthly: phRows, HiveMonthly: hcRows });
   }
 
-  const empty = phenosFiltered.length === 0 && hivesFiltered.length === 0;
+  const empty = phenosSeg.length === 0 && hivesSeg.length === 0;
 
   return (
     <div className="p-4">
@@ -105,6 +150,36 @@ export default function Analytics() {
         <input aria-label="Від місяця" type="month" value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} className="rounded-md border px-2 py-1 text-sm" />
         <span className="text-sm">—</span>
         <input aria-label="До місяця" type="month" value={toMonth} onChange={(e) => setToMonth(e.target.value)} className="rounded-md border px-2 py-1 text-sm" />
+      </div>
+      <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div>
+          <div className="mb-1 text-xs font-medium text-[var(--secondary)]">Порода/лінія</div>
+          <div className="flex flex-wrap gap-2">
+            {breedOptions.map((b) => (
+              <label key={b} className="flex items-center gap-1 text-sm">
+                <input type="checkbox" checked={selBreeds.includes(b)} onChange={(e) => setSelBreeds((prev) => e.target.checked ? [...prev, b] : prev.filter((x) => x !== b))} /> {b}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div className="mb-1 text-xs font-medium text-[var(--secondary)]">Статус</div>
+          <div className="flex flex-wrap gap-2">
+            {statusOptions.map((s) => (
+              <label key={s} className="flex items-center gap-1 text-sm">
+                <input type="checkbox" checked={selStatuses.includes(s)} onChange={(e) => setSelStatuses((prev) => e.target.checked ? [...prev, s] : prev.filter((x) => x !== s))} /> {s}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div className="mb-1 text-xs font-medium text-[var(--secondary)]">Джерело</div>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <label className="flex items-center gap-1"><input type="checkbox" checked={sources.phenotypes} onChange={(e) => setSources((p) => ({ ...p, phenotypes: e.target.checked }))} /> Фенотипи</label>
+            <label className="flex items-center gap-1"><input type="checkbox" checked={sources.hivecards} onChange={(e) => setSources((p) => ({ ...p, hivecards: e.target.checked }))} /> Вуликові карти</label>
+            <button className="ml-auto rounded-md border px-2 py-1" onClick={() => { setSelBreeds([]); setSelStatuses([]); setSources({ phenotypes: true, hivecards: true }); setFromMonth(defFrom); setToMonth(defTo); }}>Скинути</button>
+          </div>
+        </div>
       </div>
 
       {empty && (
@@ -147,7 +222,7 @@ export default function Analytics() {
 
       {!empty && tab === 'phenotypes' && (
         <div className="space-y-4">
-          {phenosFiltered.length === 0 && (
+          {phenosSeg.length === 0 && (
             <div className="rounded-md border border-[var(--divider)] bg-[var(--surface)] p-4 text-sm text-[var(--secondary)]">Немає записів за обраний період</div>
           )}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -185,7 +260,7 @@ export default function Analytics() {
 
       {!empty && tab === 'hive' && (
         <div className="space-y-4">
-          {hivesFiltered.length === 0 && (
+          {hivesSeg.length === 0 && (
             <div className="rounded-md border border-[var(--divider)] bg-[var(--surface)] p-4 text-sm text-[var(--secondary)]">Немає записів за обраний період</div>
           )}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
