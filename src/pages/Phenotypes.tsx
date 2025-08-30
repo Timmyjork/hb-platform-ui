@@ -6,6 +6,7 @@ import Toggle from "../components/ui/Toggle";
 import * as phenos from "../state/phenotypes";
 import { parseCSV, toCSV } from "../components/utils/csv";
 import { downloadPhenotypesTemplate, parsePhenotypesXLSX, exportPhenotypesXLSX, type PhenotypeRow } from "../utils/xlsx-phenotypes";
+import InfoTooltip from "../components/ui/InfoTooltip";
 import { useToast } from "../components/ui/Toast";
 
 type Scale = 1 | 2 | 3 | 4 | 5;
@@ -157,6 +158,24 @@ export default function Phenotypes() {
         />
       </div>
       {importErr && <div className="mb-2 text-sm text-red-600">{importErr}</div>}
+      {/* Demo inline help block (not a form) */}
+      <div className="mb-4 rounded-md border border-[var(--divider)] bg-[var(--surface)] p-3">
+        <div className="text-sm font-medium">Як заповнювати (приклади)</div>
+        <ul className="mt-2 space-y-1 text-sm">
+          <li className="flex items-center gap-2">
+            <span>Гігієнічна поведінка, %</span>
+            <InfoTooltip text="Діапазон 0–100. Напр.: 92" />
+          </li>
+          <li className="flex items-center gap-2">
+            <span>Форма черевця (1–5)</span>
+            <InfoTooltip text="Шкала 1 – вузьке, 5 – широке" />
+          </li>
+          <li className="flex items-center gap-2">
+            <span>Агресивність (1–5)</span>
+            <InfoTooltip text="1 – миролюбна, 5 – агресивна" />
+          </li>
+        </ul>
+      </div>
       {imported.length > 0 && (
         <div className="mb-2 text-sm text-[var(--secondary)]">Імпортовано записів: <b>{imported.length}</b></div>
       )}
