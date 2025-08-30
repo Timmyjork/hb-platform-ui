@@ -4,6 +4,9 @@ import type { PhenotypeEntry, HiveCardEntry } from "../state/analytics";
 import { exportCSV, exportXLSX } from "../utils/export";
 import InfoTooltip from "../components/ui/InfoTooltip";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, Legend, BarChart, Bar } from "recharts";
+import { selectFilteredRows, buildCohorts, type UnifiedRow } from "../analytics/selectors";
+import { avgEggsPerDay, honeyKgAvg, hygienePctAvg, movingAvg } from "../analytics/metrics";
+import DrilldownModal from "../components/analytics/DrilldownModal";
 
 function KPIStat({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
@@ -133,6 +136,30 @@ export default function Analytics() {
 
   const empty = phenosSeg.length === 0 && hivesSeg.length === 0;
 
+  // Cohort compare additions
+  const [breakdown, setBreakdown] = useState<'breed' | 'year' | 'source' | 'status'>('breed');
+  const unified = useMemo<UnifiedRow[]>(() => selectFilteredRows({ from: fromDate, to: toDate, breeds: selBreeds, statuses: selStatuses, sources }), [fromDate, toDate, selBreeds, selStatuses, sources]);
+  const cohorts = useMemo(() => buildCohorts(unified, breakdown), [unified, breakdown]);
+  const [selectedCohorts, setSelectedCohorts] = useState<string[]>([]);
+  const [metric, setMetric] = useState<'eggs' | 'honey' | 'hygiene'>('hygiene');
+  const [smooth, setSmooth] = useState<boolean>(false);
+  const [drillRows, setDrillRows] = useState<UnifiedRow[] | null>(null);
+
+  const cohortSeries = useMemo(() => {
+    const byMonth = (rows: UnifiedRow[]) => seriesByMonth(rows, (r) => r.date, { v: (arr) => {
+      if (metric === 'eggs') return avgEggsPerDay(arr).value;
+      if (metric === 'honey') return honeyKgAvg(arr).value;
+      return hygienePctAvg(arr).value;
+    }});
+    const out: Record<string, Array<{ month: string; v: number }>> = {};
+    const chosen = selectedCohorts.length ? cohorts.filter(c => selectedCohorts.includes(c.key)) : cohorts.slice(0, 2);
+    for (const c of chosen) {
+      const pts = byMonth(c.rows) as Array<{ month: string; v: number }>;
+      out[c.key] = smooth ? pts.map((p, i, arr) => ({ month: p.month, v: movingAvg(arr.map(x => x.v), 3)[i] })) : pts;
+    }
+    return out;
+  }, [cohorts, selectedCohorts, metric, smooth]);
+
   return (
     <div className="p-4">
       <div className="mb-3 flex gap-2">
@@ -181,6 +208,37 @@ export default function Analytics() {
           </div>
         </div>
       </div>
+
+      {/* Breakdown & cohorts */}
+      {!empty && (
+        <div className="mb-3 rounded-md border border-[var(--divider)] bg-[var(--surface)] p-3">
+          <div className="mb-2 flex flex-wrap items-center gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-[var(--secondary)]">Breakdown:</span>
+              {(['breed','year','source','status'] as const).map((b) => (
+                <label key={b} className="flex items-center gap-1"><input type="radio" name="breakdown" checked={breakdown===b} onChange={() => setBreakdown(b)} /> {b}</label>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-[var(--secondary)]">Metric:</span>
+              <select value={metric} onChange={(e) => setMetric(e.target.value as 'eggs'|'honey'|'hygiene')} className="rounded-md border px-2 py-1">
+                <option value="hygiene">Hygiene %</option>
+                <option value="eggs">Eggs/Day</option>
+                <option value="honey">Honey kg</option>
+              </select>
+              <label className="ml-2 flex items-center gap-1"><input type="checkbox" checked={smooth} onChange={(e)=>setSmooth(e.target.checked)} /> Smooth</label>
+            </div>
+          </div>
+          <div className="text-xs font-medium text-[var(--secondary)] mb-1">Cohorts</div>
+          <div className="flex flex-wrap gap-2">
+            {cohorts.map((c) => (
+              <label key={c.key} className="flex items-center gap-1 text-sm">
+                <input type="checkbox" checked={selectedCohorts.includes(c.key)} onChange={(e)=> setSelectedCohorts((prev)=> e.target.checked ? (prev.length<4?[...prev,c.key]:prev) : prev.filter(k=>k!==c.key))} /> {c.label}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       {empty && (
         <div className="rounded-md border border-[var(--divider)] bg-[var(--surface)] p-4 text-sm text-[var(--secondary)]">
@@ -295,6 +353,63 @@ export default function Analytics() {
           </div>
         </div>
       )}
+
+      {!empty && (
+        <div className="space-y-3">
+          <ChartCard title="Cohort compare">
+            <LineChart data={Object.values(cohortSeries)[0] || []} margin={{ left: 8, right: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <RTooltip />
+              <Legend />
+              {Object.entries(cohortSeries).map(([key, pts], idx) => (
+                <Line key={key} type="monotone" data={pts} dataKey="v" name={key} stroke={["#0EA5E9","#22C55E","#F59E0B","#EF4444"][idx%4]} />
+              ))}
+            </LineChart>
+          </ChartCard>
+          <div className="rounded-lg border border-[var(--divider)] bg-[var(--surface)] p-3 shadow-sm">
+            <div className="text-sm font-medium mb-2">Cohort summary</div>
+            <div className="overflow-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-2 py-1 text-left">Cohort</th>
+                    <th className="px-2 py-1 text-left">N</th>
+                    <th className="px-2 py-1 text-left">Avg Eggs/Day</th>
+                    <th className="px-2 py-1 text-left">Honey kg</th>
+                    <th className="px-2 py-1 text-left">Hygiene %</th>
+                    <th className="px-2 py-1 text-left">Sealed brood</th>
+                    <th className="px-2 py-1 text-left">Spring Dev</th>
+                    <th className="px-2 py-1 text-left">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cohorts.filter(c=> selectedCohorts.length? selectedCohorts.includes(c.key): true).slice(0,4).map((c) => {
+                    const eggs = avgEggsPerDay(c.rows); const hon = honeyKgAvg(c.rows); const hyg = hygienePctAvg(c.rows);
+                    const sealed = c.rows.map(r=> r.sealedBroodFrames ?? 0).filter(v=>v>0);
+                    const spring = c.rows.map(r=> r.springDev ?? 0).filter(v=>v>0);
+                    const n = Math.max(eggs.n, hon.n, hyg.n);
+                    return (
+                      <tr key={c.key} className="border-t">
+                        <td className="px-2 py-1">{c.label}</td>
+                        <td className="px-2 py-1">{n}</td>
+                        <td className="px-2 py-1">{eggs.value.toFixed(1)}</td>
+                        <td className="px-2 py-1">{hon.value.toFixed(1)}</td>
+                        <td className="px-2 py-1">{hyg.value.toFixed(1)}</td>
+                        <td className="px-2 py-1">{sealed.length ? (sealed.reduce((a,b)=>a+b,0)/sealed.length).toFixed(1): '0.0'}</td>
+                        <td className="px-2 py-1">{spring.length ? (spring.reduce((a,b)=>a+b,0)/spring.length).toFixed(1): '0.0'}</td>
+                        <td className="px-2 py-1"><button className="rounded-md border px-2 py-1" onClick={()=>setDrillRows(c.rows)}>Drill-down</button></td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+      {drillRows && <DrilldownModal rows={drillRows} onClose={()=>setDrillRows(null)} />}
     </div>
   );
 }
