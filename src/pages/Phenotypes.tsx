@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import Button from "../components/ui/Button";
 import Toggle from "../components/ui/Toggle";
 import * as phenos from "../state/phenotypes";
 import { parseCSV, toCSV } from "../components/utils/csv";
+import { downloadPhenotypesTemplate, parsePhenotypesXLSX, type PhenotypeRow } from "../utils/xlsx-phenotypes";
 import { useToast } from "../components/ui/Toast";
 
 type Scale = 1 | 2 | 3 | 4 | 5;
@@ -67,6 +68,9 @@ export default function Phenotypes() {
   const [form, setForm] = useState<Draft>(emptyDraft);
   const [saved, setSaved] = useState<phenos.PhenotypeRecord[]>([]);
   const { push } = useToast();
+  const xlsxInputRef = useRef<HTMLInputElement>(null);
+  const [imported, setImported] = useState<PhenotypeRow[]>([]);
+  const [importErr, setImportErr] = useState<string>("");
 
   useEffect(() => {
     try {
@@ -125,6 +129,36 @@ export default function Phenotypes() {
         </button>
       </div>
       <h1 className="text-xl font-semibold mb-2">Фенотипи</h1>
+      <div className="mb-3 flex items-center gap-2">
+        <Button onClick={() => downloadPhenotypesTemplate()}>Скачати шаблон XLSX</Button>
+        <Button variant="secondary" onClick={() => xlsxInputRef.current?.click()}>Імпорт XLSX</Button>
+        <input
+          ref={xlsxInputRef}
+          type="file"
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          className="hidden"
+          onChange={async (e) => {
+            const f = e.currentTarget.files?.[0];
+            if (!f) return;
+            try {
+              setImportErr("");
+              const rows = await parsePhenotypesXLSX(f);
+              setImported(rows);
+              push({ title: `Імпортовано записів: ${rows.length}`, tone: "success" });
+            } catch (err) {
+              const msg = (err && typeof err === 'object' && 'message' in err) ? String((err as {message:string}).message) : 'Помилка імпорту';
+              setImportErr(msg);
+              push({ title: msg, tone: "danger" });
+            } finally {
+              e.currentTarget.value = "";
+            }
+          }}
+        />
+      </div>
+      {importErr && <div className="mb-2 text-sm text-red-600">{importErr}</div>}
+      {imported.length > 0 && (
+        <div className="mb-2 text-sm text-[var(--secondary)]">Імпортовано записів: <b>{imported.length}</b></div>
+      )}
       <p className="mb-4 text-sm text-[var(--secondary)]">
         Тут буде форма для введення фенотипічних ознак матки та колонії.
       </p>
