@@ -144,6 +144,7 @@ export default function Analytics() {
   const [metric, setMetric] = useState<'eggs' | 'honey' | 'hygiene'>('hygiene');
   const [smooth, setSmooth] = useState<boolean>(false);
   const [drillRows, setDrillRows] = useState<UnifiedRow[] | null>(null);
+  const [comparePrev, setComparePrev] = useState<boolean>(false);
 
   const cohortSeries = useMemo(() => {
     const byMonth = (rows: UnifiedRow[]) => seriesByMonth(rows, (r) => r.date, { v: (arr) => {
@@ -160,12 +161,63 @@ export default function Analytics() {
     return out;
   }, [cohorts, selectedCohorts, metric, smooth]);
 
+  // Previous period series for compare
+  const prevFromDate = useMemo(() => (fromDate ? new Date(fromDate.getFullYear() - 1, fromDate.getMonth(), fromDate.getDate()) : undefined), [fromDate]);
+  const prevToDate = useMemo(() => (toDate ? new Date(toDate.getFullYear() - 1, toDate.getMonth(), toDate.getDate()) : undefined), [toDate]);
+  const phenosPrev = useMemo(() => filterByDate(phenos, prevFromDate, prevToDate), [phenos, prevFromDate, prevToDate]);
+  const hivesPrev = useMemo(() => filterByDate(hives, prevFromDate, prevToDate), [hives, prevFromDate, prevToDate]);
+  const phenosPrevSeg = useMemo(() => (sources.phenotypes ? applySegments(phenosPrev, { breeds: selBreeds, statuses: selStatuses }) : []), [phenosPrev, selBreeds, selStatuses, sources]);
+  const hivesPrevSeg = useMemo(() => (sources.hivecards ? applySegments(hivesPrev, { breeds: selBreeds, statuses: selStatuses }) : []), [hivesPrev, selBreeds, selStatuses, sources]);
+  // Prev KPI (for future delta display on tiles)
+  useMemo(() => calcPhenotypeKPI(phenosPrevSeg), [phenosPrevSeg]);
+  useMemo(() => calcHiveKPI(hivesPrevSeg), [hivesPrevSeg]);
+  const phMonthlyPrev = useMemo(() => seriesByMonth<PhenotypeEntry>(
+    phenosPrevSeg,
+    (e) => e.date,
+    {
+      eggs: (arr) => avg(arr.map((e) => e.eggsPerDay ?? 0)),
+      hygiene: (arr) => avg(arr.map((e) => e.hygienePct ?? 0)),
+    }
+  ), [phenosPrevSeg]);
+  const hcMonthlyPrev = useMemo(() => seriesByMonth<HiveCardEntry>(
+    hivesPrevSeg,
+    (e) => e.date,
+    {
+      frames: (arr) => avg(arr.map((e) => e.framesOccupied)),
+      open: (arr) => avg(arr.map((e) => e.broodOpen)),
+      capped: (arr) => avg(arr.map((e) => e.broodCapped)),
+    }
+  ), [hivesPrevSeg]);
+
+  // merge helpers for compare
+  const hcMonthlyMerged = useMemo(() => {
+    type Row = { month: string; frames?: number; frames_prev?: number };
+    const map = new Map<string, Row>();
+    (hcMonthly as Array<{month:string;frames:number}>).forEach((p) => map.set(p.month, { month: p.month, frames: p.frames }));
+    (hcMonthlyPrev as Array<{month:string;frames:number}>).forEach((p) => {
+      const m = map.get(p.month) || { month: p.month };
+      m.frames_prev = p.frames; map.set(p.month, m);
+    });
+    return Array.from(map.values()).sort((a, b) => (a.month > b.month ? 1 : -1));
+  }, [hcMonthly, hcMonthlyPrev]);
+  const phMonthlyMerged = useMemo(() => {
+    type Row = { month: string; eggs?: number; eggs_prev?: number; hygiene?: number; hygiene_prev?: number };
+    const map = new Map<string, Row>();
+    (phMonthly as Array<{month:string;eggs:number;hygiene:number}>).forEach((p) => map.set(p.month, { month: p.month, eggs: p.eggs, hygiene: p.hygiene }));
+    (phMonthlyPrev as Array<{month:string;eggs:number;hygiene:number}>).forEach((p) => {
+      const m = map.get(p.month) || { month: p.month };
+      m.eggs_prev = p.eggs; m.hygiene_prev = p.hygiene; map.set(p.month, m);
+    });
+    return Array.from(map.values()).sort((a, b) => (a.month > b.month ? 1 : -1));
+  }, [phMonthly, phMonthlyPrev]);
+
   return (
     <div className="p-4">
       <div className="mb-3 flex gap-2">
         <button className={`rounded px-3 py-1.5 text-sm ${tab==='overview'?'bg-gray-900 text-white':'border border-[var(--divider)]'}`} onClick={() => setTab('overview')}>Огляд</button>
         <button className={`rounded px-3 py-1.5 text-sm ${tab==='phenotypes'?'bg-gray-900 text-white':'border border-[var(--divider)]'}`} onClick={() => setTab('phenotypes')}>Фенотипи</button>
         <button className={`rounded px-3 py-1.5 text-sm ${tab==='hive'?'bg-gray-900 text-white':'border border-[var(--divider)]'}`} onClick={() => setTab('hive')}>Вуликові карти</button>
+        <button className={`rounded px-3 py-1.5 text-sm ${tab==='segments'?'bg-gray-900 text-white':'border border-[var(--divider)]'}`} onClick={() => setTab('segments')}>Сегменти</button>
         <div className="ml-auto flex gap-2">
           <button className="rounded-md border px-3 py-1.5 text-sm" onClick={exportAllCSV}>Експорт аналітики (CSV)</button>
           <button className="rounded-md border px-3 py-1.5 text-sm" onClick={exportAllXLSX}>Експорт аналітики (XLSX)</button>
@@ -177,6 +229,7 @@ export default function Analytics() {
         <input aria-label="Від місяця" type="month" value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} className="rounded-md border px-2 py-1 text-sm" />
         <span className="text-sm">—</span>
         <input aria-label="До місяця" type="month" value={toMonth} onChange={(e) => setToMonth(e.target.value)} className="rounded-md border px-2 py-1 text-sm" />
+        <label className="ml-4 flex items-center gap-1 text-sm"><input type="checkbox" checked={comparePrev} onChange={(e)=>setComparePrev(e.target.checked)} /> Порівняти з минулим роком</label>
       </div>
       <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-3">
         <div>
@@ -255,23 +308,25 @@ export default function Analytics() {
           </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <ChartCard title="Сер. зайняті рамки по місяцях">
-              <LineChart data={hcMonthly} margin={{ left: 8, right: 8 }}>
+              <LineChart data={comparePrev ? hcMonthlyMerged : (hcMonthly as Array<{month:string;frames:number}>)} margin={{ left: 8, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
                 <RTooltip />
                 <Legend />
                 <Line type="monotone" dataKey="frames" stroke="#0EA5E9" />
+                {comparePrev && <Line type="monotone" dataKey="frames_prev" stroke="#0EA5E9" strokeDasharray="4 2" name="frames (prev)" />}
               </LineChart>
             </ChartCard>
             <ChartCard title="Сер. гігієна по місяцях">
-              <BarChart data={phMonthly} margin={{ left: 8, right: 8 }}>
+              <BarChart data={comparePrev ? phMonthlyMerged : (phMonthly as Array<{month:string;hygiene:number}>)} margin={{ left: 8, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
                 <RTooltip />
                 <Legend />
                 <Bar dataKey="hygiene" fill="#22C55E" />
+                {comparePrev && <Bar dataKey="hygiene_prev" fill="#16A34A" opacity={0.4} name="hygiene (prev)" />}
               </BarChart>
             </ChartCard>
           </div>
@@ -293,23 +348,25 @@ export default function Analytics() {
           </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <ChartCard title="Яйценосність по місяцях">
-              <LineChart data={phMonthly} margin={{ left: 8, right: 8 }}>
+              <LineChart data={comparePrev ? phMonthlyMerged : (phMonthly as Array<{month:string;eggs:number}>)} margin={{ left: 8, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
                 <RTooltip />
                 <Legend />
                 <Line type="monotone" dataKey="eggs" stroke="#0EA5E9" />
+                {comparePrev && <Line type="monotone" dataKey="eggs_prev" stroke="#0EA5E9" strokeDasharray="4 2" name="eggs (prev)" />}
               </LineChart>
             </ChartCard>
             <ChartCard title="Гігієна по місяцях">
-              <BarChart data={phMonthly} margin={{ left: 8, right: 8 }}>
+              <BarChart data={comparePrev ? phMonthlyMerged : (phMonthly as Array<{month:string;hygiene:number}>)} margin={{ left: 8, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
                 <RTooltip />
                 <Legend />
                 <Bar dataKey="hygiene" fill="#22C55E" />
+                {comparePrev && <Bar dataKey="hygiene_prev" fill="#16A34A" opacity={0.4} name="hygiene (prev)" />}
               </BarChart>
             </ChartCard>
           </div>
@@ -407,6 +464,12 @@ export default function Analytics() {
               </table>
             </div>
           </div>
+        </div>
+      )}
+      {!empty && tab==='segments' && (
+        <div className="mt-4">
+          {/* Segment builder */}
+          <SegmentBuilder rows={unified} />
         </div>
       )}
       {drillRows && <DrilldownModal rows={drillRows} onClose={()=>setDrillRows(null)} />}
