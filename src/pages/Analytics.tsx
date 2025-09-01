@@ -5,6 +5,10 @@ import { exportCSV, exportXLSX } from "../utils/export";
 import InfoTooltip from "../components/ui/InfoTooltip";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, Legend, BarChart, Bar } from "recharts";
 import { selectFilteredRows, buildCohorts, type UnifiedRow } from "../analytics/selectors";
+import DashboardCanvas from "../components/analytics/DashboardCanvas";
+import type { Dashboard, LayoutItem, WidgetBase } from "../analytics/dashboards";
+import { listDashboards, saveDashboard, deleteDashboard, makeShareURL, setActiveFromURL } from "../analytics/dashboards";
+import SegmentBuilder from "../components/analytics/SegmentBuilder";
 import { avgEggsPerDay, honeyKgAvg, hygienePctAvg, movingAvg } from "../analytics/metrics";
 import DrilldownModal from "../components/analytics/DrilldownModal";
 
@@ -36,7 +40,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactEl
 }
 
 export default function Analytics() {
-  const [tab, setTab] = useState<'overview' | 'phenotypes' | 'hive'>('overview');
+  const [tab, setTab] = useState<'overview' | 'phenotypes' | 'hive' | 'segments' | 'dash'>('overview');
   const phenos = useMemo(() => getPhenotypes(), []);
   const hives = useMemo(() => getHiveCards(), []);
 
@@ -161,6 +165,21 @@ export default function Analytics() {
     return out;
   }, [cohorts, selectedCohorts, metric, smooth]);
 
+  // Dashboards
+  const [dashboards, setDashboards] = useState<Dashboard[]>(() => listDashboards());
+  const [activeDashId, setActiveDashId] = useState<string | undefined>(() => setActiveFromURL());
+  const activeDash = useMemo(()=> dashboards.find(d=>d.id===activeDashId) ?? dashboards[0], [dashboards, activeDashId]);
+  const [layout, setLayout] = useState<LayoutItem[]>(activeDash?.layout ?? []);
+  const [widgets, setWidgets] = useState<WidgetBase[]>(activeDash?.widgets ?? []);
+  useMemo(()=>{ if (activeDash) { setLayout(activeDash.layout); setWidgets(activeDash.widgets) }}, [activeDash]);
+  const addWidget = (type: WidgetBase['type']) => {
+    const id = `w_${Math.random().toString(36).slice(2,6)}`
+    const w: WidgetBase = { id, type, title: `${type.toUpperCase()} ${widgets.length+1}`, source: 'phenotypes', metrics: ['avgHygiene'], groupBy: ['year'] }
+    setWidgets(prev=> [...prev, w]); setLayout(prev=> [...prev, { id, x: (prev.length*3)%12, y: 0, w: 3, h: 6 }])
+  }
+  const saveDash = () => { if (!activeDash) return; const next: Dashboard = { ...activeDash, widgets, layout, updatedAt: new Date().toISOString() } as Dashboard; saveDashboard(next); setDashboards(listDashboards()) }
+  const deleteDash = () => { if (!activeDash) return; deleteDashboard(activeDash.id); setDashboards(listDashboards()) }
+
   // Previous period series for compare
   const prevFromDate = useMemo(() => (fromDate ? new Date(fromDate.getFullYear() - 1, fromDate.getMonth(), fromDate.getDate()) : undefined), [fromDate]);
   const prevToDate = useMemo(() => (toDate ? new Date(toDate.getFullYear() - 1, toDate.getMonth(), toDate.getDate()) : undefined), [toDate]);
@@ -218,6 +237,7 @@ export default function Analytics() {
         <button className={`rounded px-3 py-1.5 text-sm ${tab==='phenotypes'?'bg-gray-900 text-white':'border border-[var(--divider)]'}`} onClick={() => setTab('phenotypes')}>Фенотипи</button>
         <button className={`rounded px-3 py-1.5 text-sm ${tab==='hive'?'bg-gray-900 text-white':'border border-[var(--divider)]'}`} onClick={() => setTab('hive')}>Вуликові карти</button>
         <button className={`rounded px-3 py-1.5 text-sm ${tab==='segments'?'bg-gray-900 text-white':'border border-[var(--divider)]'}`} onClick={() => setTab('segments')}>Сегменти</button>
+        <button className={`rounded px-3 py-1.5 text-sm ${tab==='dash'?'bg-gray-900 text-white':'border border-[var(--divider)]'}`} onClick={() => setTab('dash')}>Дашборди</button>
         <div className="ml-auto flex gap-2">
           <button className="rounded-md border px-3 py-1.5 text-sm" onClick={exportAllCSV}>Експорт аналітики (CSV)</button>
           <button className="rounded-md border px-3 py-1.5 text-sm" onClick={exportAllXLSX}>Експорт аналітики (XLSX)</button>
@@ -470,6 +490,21 @@ export default function Analytics() {
         <div className="mt-4">
           {/* Segment builder */}
           <SegmentBuilder rows={unified} />
+        </div>
+      )}
+      {!empty && tab==='dash' && activeDash && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <select className="rounded-md border px-2 py-1 text-sm" value={activeDashId} onChange={(e)=> setActiveDashId(e.target.value)}>
+              {dashboards.map(d=> <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+            <button className="rounded-md border px-2 py-1 text-sm" onClick={()=> addWidget('kpi')}>Add KPI</button>
+            <button className="rounded-md border px-2 py-1 text-sm" onClick={()=> addWidget('line')}>Add Line</button>
+            <button className="rounded-md border px-2 py-1 text-sm" onClick={saveDash}>Save</button>
+            <button className="rounded-md border px-2 py-1 text-sm" onClick={deleteDash}>Delete</button>
+            <button className="rounded-md border px-2 py-1 text-sm" onClick={()=> navigator.clipboard?.writeText(makeShareURL(activeDash.id))}>Share link</button>
+          </div>
+          <DashboardCanvas widgets={widgets} layout={layout} onLayoutChange={setLayout} renderWidget={(w)=> <div className="text-xs text-[var(--secondary)]">{w.type} {w.source}</div>} />
         </div>
       )}
       {drillRows && <DrilldownModal rows={drillRows} onClose={()=>setDrillRows(null)} />}
