@@ -47,3 +47,35 @@ export function exportXLSX(filename: string, sheets: Record<string, Array<Record
   }
   XLSX.writeFile(wb, filename);
 }
+
+export async function exportChart(node: HTMLElement, filename: string, format: 'svg'|'png' = 'png') {
+  const svg = node.querySelector('svg') as SVGSVGElement | null
+  if (!svg) return
+  const serializer = new XMLSerializer()
+  const svgStr = serializer.serializeToString(svg)
+  if (format === 'svg') {
+    downloadBlob(filename.endsWith('.svg') ? filename : `${filename}.svg`, 'image/svg+xml', svgStr)
+    return
+  }
+  // PNG: draw svg to canvas
+  const img = new Image()
+  const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' })
+  const url = URL.createObjectURL(svgBlob)
+  await new Promise<void>((resolve) => {
+    img.onload = () => resolve()
+    img.src = url
+  })
+  const canvas = document.createElement('canvas')
+  canvas.width = svg.viewBox.baseVal.width || svg.clientWidth
+  canvas.height = svg.viewBox.baseVal.height || svg.clientHeight
+  const ctx = canvas.getContext('2d')
+  if (ctx) ctx.drawImage(img, 0, 0)
+  URL.revokeObjectURL(url)
+  const dataUrl = canvas.toDataURL('image/png')
+  const a = document.createElement('a')
+  a.href = dataUrl
+  a.download = filename.endsWith('.png') ? filename : `${filename}.png`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
