@@ -6,6 +6,7 @@ import InfoTooltip from "../components/ui/InfoTooltip";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, Legend, BarChart, Bar } from "recharts";
 import { selectFilteredRows, buildCohorts, type UnifiedRow } from "../analytics/selectors";
 import DashboardCanvas from "../components/analytics/DashboardCanvas";
+import KPIWidget from "../components/analytics/widgets/KPIWidget";
 import type { Dashboard, LayoutItem, WidgetBase } from "../analytics/dashboards";
 import { listDashboards, saveDashboard, deleteDashboard, makeShareURL, setActiveFromURL } from "../analytics/dashboards";
 import SegmentBuilder from "../components/analytics/SegmentBuilder";
@@ -504,7 +505,10 @@ export default function Analytics() {
             <button className="rounded-md border px-2 py-1 text-sm" onClick={deleteDash}>Delete</button>
             <button className="rounded-md border px-2 py-1 text-sm" onClick={()=> navigator.clipboard?.writeText(makeShareURL(activeDash.id))}>Share link</button>
           </div>
-          <DashboardCanvas widgets={widgets} layout={layout} onLayoutChange={setLayout} renderWidget={(w)=> <div className="text-xs text-[var(--secondary)]">{w.type} {w.source}</div>} />
+          <DashboardCanvas widgets={widgets} layout={layout} onLayoutChange={setLayout} renderWidget={(w)=> {
+            if (w.type==='kpi') return <KPIWidget widget={w} />
+            return <div className="text-xs text-[var(--secondary)]">{w.type} {w.source}</div>
+          }} />
         </div>
       )}
       {drillRows && <DrilldownModal rows={drillRows} onClose={()=>setDrillRows(null)} />}

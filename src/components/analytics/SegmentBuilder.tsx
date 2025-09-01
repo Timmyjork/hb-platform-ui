@@ -1,14 +1,13 @@
 import React, { useMemo, useRef } from 'react'
 import type { UnifiedRow } from '../../analytics/selectors'
-import { buildSegments, type SegmentRule } from '../../analytics/segments'
+import { buildSegments } from '../../analytics/segments'
 import { exportCSV, exportXLSX, exportChart } from '../../utils/export'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, Legend } from 'recharts'
 
 export default function SegmentBuilder({ rows }: { rows: UnifiedRow[] }) {
   const [groupBy, setGroupBy] = React.useState<Array<'breed'|'region'|'year'|'status'>>(['breed'])
   const [metric, setMetric] = React.useState<'avgHoney'|'avgEggRate'|'avgHygiene'>('avgHygiene')
-  const rule: SegmentRule = { groupBy }
-  const segments = useMemo(()=> buildSegments(rows, rule), [rows, rule])
+  const segments = useMemo(()=> buildSegments(rows, { groupBy }), [rows, groupBy])
   const chartRef = useRef<HTMLDivElement>(null)
 
   const table = segments.map(s=>({
