@@ -17,7 +17,7 @@ const Select = forwardRef<HTMLSelectElement, Props>(function Select(
   return (
     <label className="flex flex-col gap-1">
       {label ? <span className="text-sm font-medium">{label}</span> : null}
-      <select ref={ref} {...rest} className={`${base} ${className}`}>
+      <select ref={ref} aria-label={(rest as any)["aria-label"] ?? label} {...rest} className={`${base} ${className}`}>
       {children ?? items?.map((opt) => (
         <option key={opt.value} value={opt.value}>{opt.label}</option>
       ))}

@@ -1,63 +1,31 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ToastProvider, useToast } from "./components/ui/Toast";
+import { AuthProvider, useAuth } from './auth/useAuth'
+import AuthMenu from './auth/AuthMenu'
+import { NAV_BY_ROLE, type RoleKey as NewRoleKey } from './nav'
 import DataTable from "./components/table/DataTable";
 import type { Row as QueenRow } from "./components/table/DataTable";
 import Button from "./components/ui/Button";
 import BeekeeperQueens from "./pages/BeekeeperQueens";
-import Phenotypes from "./pages/Phenotypes";
+// keep Phenotypes imported by tests in other places via wrapper page
 import HiveCard from "./pages/HiveCard";
-import Analytics from "./pages/Analytics";
+import AnalyticsRatings from "./pages/AnalyticsRatings";
+import AnalyticsRegional from "./pages/AnalyticsRegional";
+import AnalyticsAlerts from "./pages/AnalyticsAlerts";
+import AnalyticsWhatIf from "./pages/AnalyticsWhatIf";
+import QueensCreateBatch from "./pages/QueensCreateBatch";
+import Observations from './pages/Observations'
+import Shop from './pages/Shop'
+import Cart from './pages/Cart'
+import Checkout from './pages/Checkout'
+import BreederListings from './pages/BreederListings'
+import BreederKYC from './pages/BreederKYC'
+import KYCModeration from './pages/KYCModeration'
+import Orders from './pages/Orders'
+import Moderation from './pages/Moderation'
+import BreederDashboard from './pages/BreederDashboard'
 
-// ——— Ролі
-const ROLES = [
-  { key: "global_admin", label: "Глобальний адмін" },
-  { key: "regional_admin", label: "Голова спілки" },
-  { key: "breeder", label: "Маткар" },
-  { key: "buyer", label: "Пасічник" },
-] as const;
-
-type RoleKey = (typeof ROLES)[number]["key"];
-
-const NAV_BY_ROLE: Record<string, { id: string; label: string }[]> = {
-  global_admin: [
-    { id: "dashboard", label: "Дашборд" },
-    { id: "users_roles", label: "Користувачі/Ролі" },
-    { id: "verification", label: "Перевірки/Підтвердження" },
-    { id: "calculations", label: "Розрахунки (BLUP/BV/SI)" },
-    { id: "analytics", label: "Аналітика" },
-    { id: "settings", label: "Налаштування" },
-  ],
-  regional_admin: [
-    { id: "dashboard", label: "Дашборд" },
-    { id: "breeder_approvals", label: "Затвердження маткарів" },
-    { id: "lines_populations", label: "Лінії та популяції" },
-    { id: "reports", label: "Звіти" },
-    { id: "phenotypes", label: "Фенотипи" },
-    { id: "settings", label: "Налаштування" },
-  ],
-  breeder: [
-    { id: "dashboard", label: "Дашборд" },
-    { id: "queens", label: "Колонії (Матки)" },
-    { id: "drones", label: "МПТ (трутневі)" },
-    { id: "traits", label: "Ознаки (Traits)" },
-    { id: "phenotypes", label: "Фенотипи" },
-    { id: "hive_card", label: "Вуликові карти" },
-    { id: "pairing", label: "Підбір пар" },
-    { id: "plans", label: "Плани спарювання" },
-    { id: "analytics", label: "Аналітика" },
-    { id: "import_export", label: "Імпорт / Експорт" },
-    { id: "settings", label: "Налаштування" },
-  ],
-  buyer: [
-    { id: "catalog", label: "Каталог" },
-    { id: "phenotypes", label: "Фенотипи" },
-    { id: "hive_card", label: "Вуликові карти" },
-    { id: "orders", label: "Замовлення" },
-    { id: "profile", label: "Профіль" },
-    { id: "analytics", label: "Аналітика" },
-    { id: "settings", label: "Налаштування" },
-  ],
-};
+// New RBAC-based nav lives in src/nav.ts
 
 function AppIcon() {
   return (
@@ -75,10 +43,24 @@ const demoRows: QueenRow[] = [
   { id: "UA-QUEEN-2023-008", breed: "Місцева / L2", year: 2023, si: 71, bv: 4, status: "Архів" },
 ];
 
-export default function HBAppShell() {
-  const [role, setRole] = useState<typeof ROLES[number]["key"]>("breeder");
-  const [active, setActive] = useState<string>("queens");
-  const nav = useMemo(() => NAV_BY_ROLE[role] ?? [], [role]);
+function Shell() {
+  const { role } = useAuth()
+  const [roleLocal, setRoleLocal] = useState<NewRoleKey>('breeder')
+  const [active, setActive] = useState<string>(() => {
+    const first = NAV_BY_ROLE[role]?.[0]?.id;
+    return first ?? "dashboard";
+  });
+  const items = NAV_BY_ROLE[roleLocal] ?? [];
+  const isValid = items.some((i) => i.id === active);
+  const current = isValid ? active : (items[0]?.id ?? "dashboard");
+  useEffect(() => {
+    const first = NAV_BY_ROLE[roleLocal]?.[0]?.id;
+    const hasActive = (NAV_BY_ROLE[roleLocal] ?? []).some((i) => i.id === active);
+    if (first && active !== first && !hasActive) {
+      setActive(first);
+    }
+  }, [roleLocal])
+  const nav = useMemo(() => items, [items])
 
   return (
     <ToastProvider>
@@ -114,17 +96,17 @@ export default function HBAppShell() {
               />
             </div>
             <div className="ml-auto flex items-center gap-3">
-              <RoleSelector value={role} onChange={setRole} />
-              <button className="rounded-md border border-[var(--divider)] bg-[var(--surface)] px-3 py-1.5 text-sm hover:bg-gray-50">
-                Увійти
-              </button>
+              <AuthMenu onRoleSync={() => { /* role changes propagate via context */ }} />
+              <div className="hidden">
+                <RoleSelector value={roleLocal} onChange={setRoleLocal} />
+              </div>
             </div>
           </div>
         </header>
 
         <div className="mx-auto grid max-w-screen-2xl grid-cols-1 md:grid-cols-[260px_minmax(0,1fr)]">
           {/* Бокове меню */}
-          <nav className="border-r border-[var(--divider)] bg-[var(--surface)] p-3">
+          <aside data-testid="nav" role="navigation" className="border-r border-[var(--divider)] bg-[var(--surface)] p-3">
             <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-[var(--secondary)]">
               Навігація
             </div>
@@ -138,7 +120,7 @@ export default function HBAppShell() {
                         ? "bg-[var(--primary)]/10 text-[var(--text)] ring-1 ring-[var(--primary)]"
                         : "hover:bg-gray-100"
                     }`}
-                    aria-current={active === item.id ? "page" : undefined}
+                    aria-current={current === item.id ? "page" : undefined}
                   >
                     <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
                     <span>{item.label}</span>
@@ -146,7 +128,7 @@ export default function HBAppShell() {
                 </li>
               ))}
             </ul>
-          </nav>
+          </aside>
 
           {/* Головний вміст */}
           <main className="min-h-[calc(100vh-56px)] p-4 md:p-6">
@@ -179,17 +161,49 @@ export default function HBAppShell() {
               </>
             )}
 
-            {/* Фенотипи */}
-            {active === "phenotypes" && <Phenotypes />}
+            {role === "buyer" && active === "my_queens" && (
+              <>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <h1 className="text-xl font-semibold">Мої матки</h1>
+                </div>
+                <BeekeeperQueens />
+              </>
+            )}
+
+            {/* Вуликова карта */}
+            {current === "observations" && <Observations />}
 
             {/* Вуликові карти */}
-            {active === "hive_card" && <HiveCard />}
+            {current === "hive_card" && <HiveCard />}
 
-            {/* Аналітика */}
-            {active === "analytics" && <Analytics />}
+            {/* Нова партія маток (breeder) */}
+            {roleLocal === "breeder" && current === "queens_batch" && <QueensCreateBatch />}
+
+            {/* Магазин */}
+            {['guest','buyer','breeder','regional_admin'].includes(roleLocal) && current === 'shop' && <Shop />}
+            {['buyer'].includes(roleLocal) && current === 'cart' && <Cart />}
+            {['buyer'].includes(roleLocal) && current === 'checkout' && <Checkout />}
+            {roleLocal === 'breeder' && current === 'breeder_listings' && <BreederListings />}
+            {roleLocal === 'breeder' && current === 'kyc' && <BreederKYC />}
+            {roleLocal === 'internal' && current === 'kyc_moderation' && <KYCModeration />}
+            {['internal','regional_admin'].includes(roleLocal) && current === 'moderation' && <Moderation />}
+            {roleLocal === 'breeder' && current === 'breeder_dashboard' && <BreederDashboard />}
+
+            {roleLocal === 'breeder' && current === 'breeder_listings' && <BreederListings />}
+            {['buyer','breeder','regional_admin'].includes(roleLocal) && current === 'orders' && <Orders />}
+
+            {/* Аналітика — What-if */}
+            {current === "analytics_whatif" && <AnalyticsWhatIf />}
+
+            {/* Аналітика — Рейтинги */}
+            {current === "analytics_ratings" && <AnalyticsRatings />}
+
+            {/* Аналітика — Регіони */}
+            {current === "analytics_regional" && <AnalyticsRegional />}
+            {current === "analytics_alerts" && <AnalyticsAlerts />}
 
             {/* Плейсхолдер для решти */}
-            {active === "settings" && (
+            {current === "settings" && (
               <div className="p-4 text-sm text-[var(--secondary)] border rounded bg-[var(--surface)]">
                 Тут скоро з’явиться функціонал. Поки що — плейсхолдер.
               </div>
@@ -199,6 +213,14 @@ export default function HBAppShell() {
       </div>
     </ToastProvider>
   );
+}
+
+export default function HBAppShell() {
+  return (
+    <AuthProvider>
+      <Shell />
+    </AuthProvider>
+  )
 }
 
 // ——— Допоміжні компоненти
@@ -215,7 +237,15 @@ function HeaderActions() {
   );
 }
 
-function RoleSelector({ value, onChange }: { value: RoleKey; onChange: (v: RoleKey) => void }) {
+function RoleSelector({ value, onChange }: { value: NewRoleKey; onChange: (v: NewRoleKey) => void }) {
+  const ROLES_LOCAL: Array<{ key: NewRoleKey; label: string }> = [
+    { key: 'guest', label: 'Гість' },
+    { key: 'buyer', label: 'Пасічник' },
+    { key: 'breeder', label: 'Маткар' },
+    { key: 'regional_admin', label: 'Голова спілки' },
+    { key: 'internal', label: 'Системний адміністратор' },
+    { key: 'global_admin', label: 'Глобальний адмін' },
+  ]
   return (
     <div className="flex items-center gap-2">
       <label className="sr-only" htmlFor="role">
@@ -224,11 +254,11 @@ function RoleSelector({ value, onChange }: { value: RoleKey; onChange: (v: RoleK
       <select
         id="role"
         value={value}
-        onChange={(e) => onChange(e.target.value as RoleKey)}
+        onChange={(e) => onChange(e.target.value as NewRoleKey)}
         className="rounded-md border border-[var(--divider)] bg-[var(--surface)] px-3 py-1.5 text-sm hover:bg-gray-50 focus:ring-2 focus:ring-[var(--primary)]"
         aria-label="Оберіть роль"
       >
-        {ROLES.map((r) => (
+        {ROLES_LOCAL.map((r) => (
           <option key={r.key} value={r.key}>
             {r.label}
           </option>
@@ -239,7 +269,9 @@ function RoleSelector({ value, onChange }: { value: RoleKey; onChange: (v: RoleK
 }
 
 function Breadcrumb({ roleKey, activeId }: { roleKey: string; activeId: string }) {
-  const roleLabel = ROLES.find((r) => r.key === roleKey)?.label ?? "Роль";
+  const roleLabel = ({
+    guest: 'Гість', buyer: 'Пасічник', breeder: 'Маткар', regional_admin: 'Голова спілки', internal: 'Системний адміністратор', global_admin: 'Глобальний адмін',
+  } as Record<string,string>)[roleKey] ?? 'Роль'
   return (
     <nav className="mb-2 text-xs text-[var(--secondary)]" aria-label="Хлібні крихти">
       <ol className="flex items-center gap-2">

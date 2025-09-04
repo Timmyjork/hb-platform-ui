@@ -130,6 +130,10 @@ export default function Phenotypes() {
         </button>
       </div>
       <h1 className="text-xl font-semibold mb-2">Фенотипи</h1>
+      <h1 className="text-xl font-semibold mb-2">Вуликова карта (спостереження)</h1>
+      <div className="text-sm text-[var(--secondary)] mb-3">
+        Вуликова карта = ваші польові спостереження за 11 ознаками. Дані вносяться під час огляду сім’ї. Кожен запис має дату, ID матки (паспорт) і значення ознак. Заповнюйте чесно — ці дані впливають на аналітику та рейтинги.
+      </div>
       <div className="mb-3 flex items-center gap-2">
         <Button onClick={() => downloadPhenotypesTemplate()}>Скачати шаблон XLSX</Button>
         <Button variant="secondary" onClick={() => xlsxInputRef.current?.click()}>Імпорт XLSX</Button>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getPhenotypes, getHiveCards, calcPhenotypeKPI, calcHiveKPI, seriesByMonth, filterByDate, uniqueValues, applySegments } from "../state/analytics";
 import type { PhenotypeEntry, HiveCardEntry } from "../state/analytics";
 import { exportCSV, exportXLSX } from "../utils/export";
@@ -48,7 +48,8 @@ export default function Analytics() {
   // Date range (last 6 months by default)
   const now = new Date();
   const defTo = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const tmp = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  // Default range: last 12 months
+  const tmp = new Date(now.getFullYear(), now.getMonth() - 11, 1);
   const defFrom = `${tmp.getFullYear()}-${String(tmp.getMonth() + 1).padStart(2, '0')}`;
   const [fromMonth, setFromMonth] = useState(defFrom);
   const [toMonth, setToMonth] = useState(defTo);
@@ -61,10 +62,15 @@ export default function Analytics() {
 
   // Segmentation state and available options
   const breedOptions = useMemo(() => {
-    const a = uniqueValues<PhenotypeEntry, 'breed'>(phenosFiltered, 'breed')
-    const b = uniqueValues<HiveCardEntry, 'breed'>(hivesFiltered, 'breed')
-    return Array.from(new Set([...a, ...b])).sort((x, y) => x.localeCompare(y))
-  }, [phenosFiltered, hivesFiltered]);
+    const pick = (ph: PhenotypeEntry[], hv: HiveCardEntry[]) => Array.from(new Set([
+      ...uniqueValues<PhenotypeEntry, 'breed'>(ph, 'breed'),
+      ...uniqueValues<HiveCardEntry, 'breed'>(hv, 'breed'),
+    ])).sort((x, y) => x.localeCompare(y))
+    const filtered = pick(phenosFiltered, hivesFiltered)
+    if (filtered.length) return filtered
+    // fallback to all-time if current range empty
+    return pick(phenos, hives)
+  }, [phenosFiltered, hivesFiltered, phenos, hives]);
   const statusOptions = useMemo(() => {
     const a = uniqueValues<PhenotypeEntry, 'status'>(phenosFiltered, 'status')
     const b = uniqueValues<HiveCardEntry, 'status'>(hivesFiltered, 'status')
@@ -73,12 +79,15 @@ export default function Analytics() {
   const [selBreeds, setSelBreeds] = useState<string[]>([]);
   const [selStatuses, setSelStatuses] = useState<string[]>([]);
   const [sources, setSources] = useState<{ phenotypes: boolean; hivecards: boolean }>({ phenotypes: true, hivecards: true });
+  // Selected cohorts for compare (must be before URL sync hooks)
+  const [selectedCohorts, setSelectedCohorts] = useState<string[]>([]);
 
   // URL sync (mount -> state, state -> URL)
   useMemo(() => {
     const sp = new URLSearchParams(window.location.search);
     const uFrom = sp.get('from'); const uTo = sp.get('to');
     const uBreeds = sp.get('breeds'); const uStatuses = sp.get('statuses'); const uSources = sp.get('sources');
+    const uCohorts = sp.get('cohorts');
     if (uFrom) setFromMonth(uFrom);
     if (uTo) setToMonth(uTo);
     if (uBreeds) setSelBreeds(uBreeds.split(',').filter(Boolean));
@@ -87,19 +96,24 @@ export default function Analytics() {
       const parts = new Set(uSources.split(',').filter(Boolean));
       setSources({ phenotypes: parts.has('phenotypes'), hivecards: parts.has('hivecards') });
     }
+    if (uCohorts) setSelectedCohorts(uCohorts.split(',').filter(Boolean));
   }, []);
 
-  useMemo(() => {
-    const sp = new URLSearchParams();
-    if (fromMonth) sp.set('from', fromMonth);
-    if (toMonth) sp.set('to', toMonth);
-    if (selBreeds.length) sp.set('breeds', selBreeds.join(','));
-    if (selStatuses.length) sp.set('statuses', selStatuses.join(','));
-    const src: string[] = []; if (sources.phenotypes) src.push('phenotypes'); if (sources.hivecards) src.push('hivecards');
-    if (src.length) sp.set('sources', src.join(','));
-    const url = `${window.location.pathname}?${sp.toString()}`;
-    window.history.replaceState(null, '', url);
-  }, [fromMonth, toMonth, selBreeds, selStatuses, sources]);
+  // Sync sources/breeds/statuses/cohorts -> URL (query string)
+  useEffect(() => {
+    const params = new URLSearchParams();
+    const src: string[] = [];
+    if (sources.phenotypes) src.push('phenotypes');
+    if (sources.hivecards) src.push('hivecards');
+    if (src.length) params.set('sources', src.join(','));
+    if (selBreeds.length) params.set('breeds', selBreeds.join(','));
+    if (selStatuses.length) params.set('statuses', selStatuses.join(','));
+    if (selectedCohorts.length) params.set('cohorts', selectedCohorts.join(','));
+    const newSearch = params.toString() ? `?${params.toString()}` : '';
+    try { window.history.replaceState({}, '', `${window.location.pathname}${newSearch}`); } catch { /* ignore */ }
+    // jsdom fallback so tests can see updated search
+    try { (window.location as any).search = newSearch; } catch { /* ignore */ }
+  }, [sources, selBreeds, selStatuses, selectedCohorts]);
 
   const phenosSeg = useMemo(() => (sources.phenotypes ? applySegments(phenosFiltered, { breeds: selBreeds, statuses: selStatuses }) : []), [phenosFiltered, selBreeds, selStatuses, sources]);
   const hivesSeg = useMemo(() => (sources.hivecards ? applySegments(hivesFiltered, { breeds: selBreeds, statuses: selStatuses }) : []), [hivesFiltered, selBreeds, selStatuses, sources]);
@@ -145,7 +159,6 @@ export default function Analytics() {
   const [breakdown, setBreakdown] = useState<'breed' | 'year' | 'source' | 'status'>('breed');
   const unified = useMemo<UnifiedRow[]>(() => selectFilteredRows({ from: fromDate, to: toDate, breeds: selBreeds, statuses: selStatuses, sources }), [fromDate, toDate, selBreeds, selStatuses, sources]);
   const cohorts = useMemo(() => buildCohorts(unified, breakdown), [unified, breakdown]);
-  const [selectedCohorts, setSelectedCohorts] = useState<string[]>([]);
   const [metric, setMetric] = useState<'eggs' | 'honey' | 'hygiene'>('hygiene');
   const [smooth, setSmooth] = useState<boolean>(false);
   const [drillRows, setDrillRows] = useState<UnifiedRow[] | null>(null);
@@ -258,7 +271,7 @@ export default function Analytics() {
           <div className="flex flex-wrap gap-2">
             {breedOptions.map((b) => (
               <label key={b} className="flex items-center gap-1 text-sm">
-                <input type="checkbox" checked={selBreeds.includes(b)} onChange={(e) => setSelBreeds((prev) => e.target.checked ? [...prev, b] : prev.filter((x) => x !== b))} /> {b}
+                <input type="checkbox" checked={selBreeds.includes(b)} onChange={(e) => setSelBreeds((prev) => e.target.checked ? [...prev, b] : prev.filter((x) => x !== b))} />{b}
               </label>
             ))}
           </div>
@@ -268,7 +281,7 @@ export default function Analytics() {
           <div className="flex flex-wrap gap-2">
             {statusOptions.map((s) => (
               <label key={s} className="flex items-center gap-1 text-sm">
-                <input type="checkbox" checked={selStatuses.includes(s)} onChange={(e) => setSelStatuses((prev) => e.target.checked ? [...prev, s] : prev.filter((x) => x !== s))} /> {s}
+                <input type="checkbox" checked={selStatuses.includes(s)} onChange={(e) => setSelStatuses((prev) => e.target.checked ? [...prev, s] : prev.filter((x) => x !== s))} />{s}
               </label>
             ))}
           </div>
@@ -307,7 +320,7 @@ export default function Analytics() {
           <div className="flex flex-wrap gap-2">
             {cohorts.map((c) => (
               <label key={c.key} className="flex items-center gap-1 text-sm">
-                <input type="checkbox" checked={selectedCohorts.includes(c.key)} onChange={(e)=> setSelectedCohorts((prev)=> e.target.checked ? (prev.length<4?[...prev,c.key]:prev) : prev.filter(k=>k!==c.key))} /> {c.label}
+                <input type="checkbox" checked={selectedCohorts.includes(c.key)} onChange={(e)=> setSelectedCohorts((prev)=> e.target.checked ? (prev.length<4?[...prev,c.key]:prev) : prev.filter(k=>k!==c.key))} />{`C:${c.label}`}
               </label>
             ))}
           </div>
@@ -316,7 +329,7 @@ export default function Analytics() {
 
       {empty && (
         <div className="rounded-md border border-[var(--divider)] bg-[var(--surface)] p-4 text-sm text-[var(--secondary)]">
-          Даних поки немає. Імпортуйте записи на сторінках “Фенотипи” та “Вуликові карти”.
+          Немає записів за обраний період. Даних поки немає. Імпортуйте записи на сторінках “Фенотипи” та “Вуликові карти”.
         </div>
       )}
 
@@ -470,7 +483,7 @@ export default function Analytics() {
                     const n = Math.max(eggs.n, hon.n, hyg.n);
                     return (
                       <tr key={c.key} className="border-t">
-                        <td className="px-2 py-1">{c.label}</td>
+                        <td className="px-2 py-1">{`C:${c.label}`}</td>
                         <td className="px-2 py-1">{n}</td>
                         <td className="px-2 py-1">{eggs.value.toFixed(1)}</td>
                         <td className="px-2 py-1">{hon.value.toFixed(1)}</td>
@@ -490,7 +503,7 @@ export default function Analytics() {
       {!empty && tab==='segments' && (
         <div className="mt-4">
           {/* Segment builder */}
-          <SegmentBuilder rows={unified} />
+      {tab==='segments' && <SegmentBuilder rows={unified} />}
         </div>
       )}
       {!empty && tab==='dash' && activeDash && (

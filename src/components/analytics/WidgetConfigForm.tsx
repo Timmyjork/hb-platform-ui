@@ -1,4 +1,3 @@
-import React from 'react'
 import type { WidgetBase } from '../../analytics/dashboards'
 
 type Props = { widget: WidgetBase; onChange: (w: WidgetBase) => void }

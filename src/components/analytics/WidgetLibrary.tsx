@@ -1,4 +1,3 @@
-import React from 'react'
 import type { WidgetBase } from '../../analytics/dashboards'
 
 export default function WidgetLibrary({ onAdd }: { onAdd: (type: WidgetBase['type']) => void }) {
@@ -11,4 +10,3 @@ export default function WidgetLibrary({ onAdd }: { onAdd: (type: WidgetBase['typ
     </div>
   )
 }
-

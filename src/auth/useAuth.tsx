@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-export type RoleKey = "buyer" | "breeder" | "regional_admin" | "global_admin";
+export type RoleKey = "guest" | "buyer" | "breeder" | "regional_admin" | "internal" | "global_admin";
 
 export type User = {
   id: string;
@@ -19,6 +19,7 @@ type Ctx = {
   login: (u: Omit<User, "id">) => void;
   logout: () => void;
   setRole: (r: RoleKey) => void;
+  role: RoleKey;
 };
 
 const AuthCtx = createContext<Ctx | null>(null);
@@ -53,7 +54,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(LS_KEY, JSON.stringify(next));
   }, [user]);
 
-  const value = useMemo(() => ({ user, login, logout, setRole }), [user, login, logout, setRole]);
+  const role: RoleKey = user?.role ?? 'guest'
+  const value = useMemo(() => ({ user, login, logout, setRole, role }), [user, login, logout, setRole, role]);
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
 

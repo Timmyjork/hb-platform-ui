@@ -1,0 +1,64 @@
+export type RoleKey = 'guest'|'buyer'|'breeder'|'regional_admin'|'internal'|'global_admin'
+
+export type NavItem = { id: string; label: string }
+
+export const NAV_BY_ROLE: Record<RoleKey, NavItem[]> = {
+  guest: [
+    { id: 'shop', label: 'Магазин' },
+    { id: 'analytics_ratings', label: 'Рейтинги' },
+  ],
+  buyer: [
+    { id: 'shop', label: 'Магазин' },
+    { id: 'cart', label: 'Кошик' },
+    { id: 'checkout', label: 'Оформлення' },
+    { id: 'my_queens', label: 'Мої матки' },
+    { id: 'observations', label: 'Вуликова карта (спостереження)' },
+    { id: 'analytics', label: 'Аналітика (зведення)' },
+    { id: 'analytics_ratings', label: 'Рейтинги' },
+    { id: 'orders', label: 'Замовлення' },
+    { id: 'kyc', label: 'KYC' },
+    { id: 'import_export', label: 'Імпорт / Експорт' },
+    { id: 'settings', label: 'Профіль / Налаштування' },
+  ],
+  breeder: [
+    { id: 'shop', label: 'Магазин' },
+    { id: 'breeder_listings', label: 'Мої лістинги' },
+    { id: 'breeder_dashboard', label: 'Мій профіль' },
+    { id: 'queens_batch', label: 'Нова партія' },
+    { id: 'queens', label: 'Колонії (Матки)' },
+    { id: 'observations', label: 'Вуликова карта (спостереження)' },
+    { id: 'orders', label: 'Замовлення' },
+    { id: 'analytics_ratings', label: 'Рейтинги' },
+    { id: 'analytics_regional', label: 'Регіони' },
+    { id: 'analytics_alerts', label: 'Алерти' },
+    { id: 'import_export', label: 'Імпорт / Експорт' },
+    { id: 'settings', label: 'Профіль / Налаштування' },
+  ],
+  regional_admin: [
+    { id: 'shop', label: 'Магазин' },
+    { id: 'my_queens', label: 'Мої матки' },
+    { id: 'observations', label: 'Вуликова карта (спостереження)' },
+    { id: 'analytics', label: 'Аналітика (зведення)' },
+    { id: 'analytics_ratings', label: 'Рейтинги' },
+    { id: 'analytics_regional', label: 'Регіони' },
+    { id: 'analytics_alerts', label: 'Алерти' },
+    { id: 'orders', label: 'Замовлення' },
+    { id: 'kyc', label: 'KYC' },
+    { id: 'import_export', label: 'Імпорт / Експорт' },
+    { id: 'settings', label: 'Профіль / Налаштування' },
+  ],
+  internal: [
+    { id: 'moderation', label: 'Модерація' },
+    { id: 'kyc_moderation', label: 'KYC модерація' },
+    { id: 'users_roles', label: 'Користувачі/Ролі' },
+    { id: 'verification', label: 'Перевірки/Підтвердження' },
+    { id: 'calculations', label: 'Розрахунки (BLUP/BV/SI)' },
+    { id: 'settings', label: 'Налаштування' },
+  ],
+  global_admin: [
+    { id: 'users_roles', label: 'Користувачі/Ролі' },
+    { id: 'verification', label: 'Перевірки/Підтвердження' },
+    { id: 'calculations', label: 'Розрахунки (BLUP/BV/SI)' },
+    { id: 'settings', label: 'Налаштування' },
+  ],
+}

@@ -8,6 +8,7 @@ const ROLE_ITEMS = [
   { value: "buyer", label: "Пасічник" },
   { value: "breeder", label: "Маткар" },
   { value: "regional_admin", label: "Голова спілки" },
+  { value: "internal", label: "Системний адміністратор" },
   { value: "global_admin", label: "Глобальний адмін" },
 ] as const;
 

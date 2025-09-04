@@ -23,6 +23,10 @@ export type Dashboard = {
   layout: LayoutItem[]
   createdAt: string
   updatedAt: string
+
+  shared?: SharedAccess[]
+  publicLink?: string
+  snapshots?: Array<{ id: string; ts: string; name: string; widgets: WidgetBase[]; layout: LayoutItem[] }>
 }
 
 export type DashState = { dashboards: Dashboard[]; activeId?: string }
@@ -86,3 +90,51 @@ export async function importDashboardJSON(file: File): Promise<Dashboard> {
   return obj
 }
 
+// Sharing & ACL
+export type ShareRole = 'owner'|'editor'|'viewer'
+export type SharedAccess = { userId: string; role: ShareRole }
+
+export function addSharedUser(dashId: string, userId: string, role: ShareRole): void {
+  const d = getDashboard(dashId); if (!d) return
+  const list = d.shared ?? []
+  const i = list.findIndex(x=>x.userId===userId)
+  if (i>=0) list[i].role = role; else list.push({ userId, role })
+  d.shared = list; saveDashboard(d)
+}
+export function removeSharedUser(dashId: string, userId: string): void {
+  const d = getDashboard(dashId); if (!d) return
+  d.shared = (d.shared ?? []).filter(x=>x.userId!==userId)
+  saveDashboard(d)
+}
+
+export function setPublicLink(dashId: string, enable: boolean): string | undefined {
+  const d = getDashboard(dashId); if (!d) return undefined
+  d.publicLink = enable ? (d.publicLink ?? `pub_${cryptoRandom()}`) : undefined
+  saveDashboard(d)
+  return d.publicLink
+}
+
+export function getDashboardByPublicLink(token: string): Dashboard | undefined {
+  return listDashboards().find(d=>d.publicLink===token)
+}
+
+// Snapshots
+export function createSnapshot(dashId: string, name?: string): string {
+  const d = getDashboard(dashId); if (!d) return ''
+  const id = `sn_${cryptoRandom()}`
+  const snap = { id, ts: new Date().toISOString(), name: name ?? new Date().toLocaleString(), widgets: deepCopy(d.widgets), layout: deepCopy(d.layout) }
+  d.snapshots = [snap, ...((d.snapshots) ?? [])]
+  saveDashboard(d)
+  return id
+}
+export function restoreSnapshot(dashId: string, snapId: string): void {
+  const d = getDashboard(dashId); if (!d) return
+  const sn = (d.snapshots ?? []).find(s=>s.id===snapId); if (!sn) return
+  d.widgets = deepCopy(sn.widgets)
+  d.layout = deepCopy(sn.layout)
+  d.updatedAt = new Date().toISOString()
+  saveDashboard(d)
+}
+
+function deepCopy<T>(v: T): T { return JSON.parse(JSON.stringify(v)) as T }
+function cryptoRandom(): string { return Math.random().toString(36).slice(2, 10) }

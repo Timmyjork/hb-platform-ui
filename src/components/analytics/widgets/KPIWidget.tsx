@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import type { WidgetBase } from '../../../analytics/dashboards'
 import { selectFilteredRows } from '../../../analytics/selectors'
 import { useAnalyticsFilters } from '../../../analytics/FilterContext'
@@ -24,4 +24,3 @@ export default function KPIWidget({ widget }: { widget: WidgetBase }) {
 }
 
 function avg(a: Array<number|undefined>): number { const f=a.filter((x):x is number=>typeof x==='number'); return f.length? f.reduce((s,v)=>s+v,0)/f.length:0 }
-

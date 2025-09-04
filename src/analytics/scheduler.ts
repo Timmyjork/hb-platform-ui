@@ -1,53 +1,80 @@
-export type Schedule = {
-  id: string
-  presetId: string
-  cron: 'daily'|'weekly'|'monthly'
-  format: 'csv'|'xlsx'|'png'
-  chart?: 'trend'|'bar'|'pie'
-  lastRunAt?: string
-  active: boolean
+import { deliver } from './transports'
+import { type UserPrefs } from './subscriptions'
+import type { DeliveryPayload } from './transports'
+
+export type Schedule = { id: string; cron: string; title: string; enabled: boolean; payload: { kind: 'daily-summary'|'weekly-summary', scope: 'global'|'region'|'breeder', scopeId?: string } };
+
+const LS_KEY = 'hb.schedules'
+
+export async function listSchedules(): Promise<Schedule[]> {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]') as Schedule[] } catch { return [] }
 }
 
-const LS_KEY = 'hb:schedules'
+export async function addSchedule(s: Schedule): Promise<void> {
+  const arr = await listSchedules()
+  arr.push(s)
+  localStorage.setItem(LS_KEY, JSON.stringify(arr))
+}
 
-export function listSchedules(): Schedule[] {
-  try { const raw = localStorage.getItem(LS_KEY); return raw ? (JSON.parse(raw) as Schedule[]) : [] } catch { return [] }
+export async function toggleSchedule(id: string, enabled: boolean): Promise<void> {
+  const arr = await listSchedules()
+  const idx = arr.findIndex(x=>x.id===id)
+  if (idx>=0) { arr[idx].enabled = enabled; localStorage.setItem(LS_KEY, JSON.stringify(arr)) }
 }
-export function saveSchedule(s: Omit<Schedule,'id'|'lastRunAt'>): Schedule {
-  const id = `sc_${Math.random().toString(36).slice(2,8)}`
-  const next: Schedule = { id, ...s }
-  const all = listSchedules(); all.push(next)
-  localStorage.setItem(LS_KEY, JSON.stringify(all)); return next
-}
-export function updateSchedule(id: string, patch: Partial<Schedule>): Schedule | undefined {
-  const all = listSchedules(); const i = all.findIndex(x=>x.id===id); if (i<0) return undefined
-  all[i] = { ...all[i], ...patch }; localStorage.setItem(LS_KEY, JSON.stringify(all)); return all[i]
-}
-export function deleteSchedule(id: string) { const all = listSchedules().filter(x=>x.id!==id); localStorage.setItem(LS_KEY, JSON.stringify(all)) }
 
-export function isDue(lastRunAt: string|undefined, cron: Schedule['cron'], now: Date): boolean {
-  const last = lastRunAt ? new Date(lastRunAt) : new Date(0)
-  const hour = 9
-  if (cron==='daily') {
-    const since = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour)
-    return last < since && now >= since
+function summarize(kind: Schedule['payload']['kind']): { subject: string; body: string } {
+  const today = new Date().toISOString().slice(0,10)
+  if (kind==='daily-summary') return { subject: `HB summary ${today}`, body: 'Daily KPI summary (demo).'}
+  return { subject: `HB weekly summary ${today}`, body: 'Weekly KPI summary (demo).'}
+}
+
+export async function runSchedules(now: Date = new Date()): Promise<void> {
+  const arr = await listSchedules()
+  const active = arr.filter(s=> s.enabled)
+  for (const s of active) {
+    const { subject, body } = summarize(s.payload.kind)
+    await deliver({ channel:'console', payload: { ruleId:'schedule', title:`${s.title}: ${subject}`, message: body, level:'info', at: now.toISOString() } })
   }
-  if (cron==='weekly') {
-    // Monday 09:00
-    const day = (now.getDay()+6)%7 // 0..6 Mon=0
-    const monday = new Date(now);
-    monday.setDate(now.getDate()-day)
-    monday.setHours(hour,0,0,0)
-    return last < monday && now >= monday
+}
+
+
+
+export function isDue(lastRunISO: string | undefined, cadence: 'daily'|'weekly'|'monthly', now: Date = new Date()): boolean {
+  if (!lastRunISO) return true
+  const last = new Date(lastRunISO)
+  if (cadence === 'daily') {
+    return now.getDate() !== last.getDate() || now.getMonth()!=last.getMonth() || now.getFullYear()!=last.getFullYear()
   }
-  // monthly: 1st 09:00
-  const first = new Date(now.getFullYear(), now.getMonth(), 1, hour)
-  return last < first && now >= first
+  if (cadence === 'weekly') {
+    const isNewWeek = weekNum(now) !== weekNum(last) || now.getFullYear()!=last.getFullYear()
+    return isNewWeek && now.getDay() === 1
+  }
+  return (now.getMonth() !== last.getMonth() || now.getFullYear()!=last.getFullYear()) && (now.getDate() === 1)
 }
 
-export function nextRunAt(lastRunAt: string|undefined, cron: Schedule['cron'], now: Date): Date {
-  if (cron==='daily') return new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 9)
-  if (cron==='weekly') return new Date(now.getFullYear(), now.getMonth(), now.getDate()+7, 9)
-  return new Date(now.getFullYear(), now.getMonth()+1, 1, 9)
+export function nextRunAt(_lastRunISO: string | undefined, cadence: 'daily'|'weekly'|'monthly', from: Date = new Date()): Date {
+  const d = new Date(from)
+  if (cadence === 'daily') { d.setDate(d.getDate() + 1); return d }
+  if (cadence === 'weekly') { d.setDate(d.getDate() + 7); return d }
+  d.setMonth(d.getMonth() + 1); return d
 }
 
+function weekNum(d: Date): number {
+  const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
+  const dayNum = dt.getUTCDay() || 7
+  dt.setUTCDate(dt.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(dt.getUTCFullYear(),0,1))
+  return Math.ceil((((dt.getTime() - yearStart.getTime()) / 86400000) + 1)/7)
+}
+
+export function dueDigest(type: 'daily'|'weekly', prefs: UserPrefs, now: Date): boolean {
+  const hour = prefs.digestHour ?? 9
+  if (now.getHours() !== hour) return false
+  if (type=='daily') return true
+  const wday = prefs.digestWday ?? 1
+  return now.getDay() === wday
+}
+
+export function buildDigestSignals(sinceISO: string): DeliveryPayload[] {
+  return [{ ruleId:'digest', title:'Digest summary', message:'since '+sinceISO, level:'info', at: new Date().toISOString() }]
+}

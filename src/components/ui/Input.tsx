@@ -17,6 +17,7 @@ export default function Input({
   className = "",
   ...rest
 }: Props) {
+  const ariaLabel = (rest as Record<string, unknown>)["aria-label"] as string | undefined
   return (
     <label className="flex w-full flex-col gap-1">
       {label && (
@@ -33,6 +34,7 @@ export default function Input({
         {leftIcon && <span className="ml-2 text-[var(--secondary)]">{leftIcon}</span>}
         <input
           className="h-full w-full bg-transparent px-3 text-sm outline-none placeholder:text-[var(--secondary)]"
+          aria-label={ariaLabel ?? label}
           {...rest}
         />
         {rightSlot && <span className="mr-2">{rightSlot}</span>}

@@ -4,9 +4,9 @@ import Phenotypes from '../Phenotypes'
 import { toCSV } from '../../components/utils/csv'
 
 describe('Phenotypes page', () => {
-  it('renders heading "Фенотипи"', () => {
+  it('renders heading "Вуликова карта (спостереження)"', () => {
     render(<Phenotypes />)
-    expect(screen.getByRole('heading', { name: 'Фенотипи' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Вуликова карта (спостереження)' })).toBeInTheDocument()
   })
 
   it('enables save when form is valid', async () => {

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import Analytics from '../Analytics'
 
 function setLocalData() {
@@ -14,7 +14,7 @@ function setLocalData() {
 }
 
 describe('Analytics segments and URL sync', () => {
-  it('toggles sources and sets breeds/statuses and updates URL', () => {
+  it('toggles sources and sets breeds/statuses and updates URL', async () => {
     localStorage.clear()
     setLocalData()
     render(<Analytics />)
@@ -23,14 +23,14 @@ describe('Analytics segments and URL sync', () => {
     const hiveLabel = screen.getByLabelText('Вуликові карти') as HTMLInputElement
     fireEvent.click(hiveLabel)
 
-    // Check breed A if present
-    const breedLabel = screen.getByText('A')
-    const breedCheckbox = breedLabel.closest('label')!.querySelector('input') as HTMLInputElement
+    // Check breed A via accessible checkbox label
+    const breedCheckbox = screen.getByRole('checkbox', { name: 'A' }) as HTMLInputElement
     fireEvent.click(breedCheckbox)
 
-    // URL should include sources and breeds
-    expect(window.location.search).toMatch(/sources=/)
-    expect(window.location.search).toMatch(/breeds=A/)
+    // URL should include sources and breeds (allow async update)
+    await waitFor(() => {
+      expect(window.location.search).toMatch(/sources=/)
+      expect(window.location.search).toMatch(/breeds=A/)
+    })
   })
 })
-
