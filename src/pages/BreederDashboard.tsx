@@ -1,13 +1,18 @@
 import { useMemo, useState } from 'react'
 import { getBreeder, saveBreeder, upsertCertificates, setRatingsPublic } from '../state/breeders.store'
 import type { Certificate } from '../types/breederProfile'
-import BREEDS from '../constants/breeds'
 import UA_REGIONS from '../constants/regions.ua'
+import { listBreeds as dictBreeds, listRegions as dictRegions } from '../state/dictionaries.store'
 
 export default function BreederDashboard({ breederId='B1' }: { breederId?: string }) {
   const [seed, setSeed] = useState(0)
   const p = useMemo(()=> getBreeder(breederId), [breederId, seed])
   const [form, setForm] = useState(()=> p || { breederId, displayName:'', regionCode:'UA-32', breedDefault:'carnica', portfolio:{ featuredQueenIds:[] }, certificates:[], ratingsPublic:true, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() })
+  const breedsActive = useMemo(()=> dictBreeds().filter(b => b.status==='active'), [])
+  const regionsISO = useMemo(()=> {
+    const act = dictRegions().filter(r => r.status==='active').map(r => UA_REGIONS.find(x => x.slug === r.code)?.code).filter(Boolean) as string[]
+    return UA_REGIONS.filter(r => act.includes(r.code))
+  }, [])
   if (!p) return <div className="p-4">Профіль не знайдено</div>
   function save() { saveBreeder(form as any); setSeed(x=>x+1) }
   function addCert() { const c: Certificate = { id: `C_${Math.random().toString(36).slice(2,8)}`, title:'New', issuer:'', dateISO:new Date().toISOString() }; upsertCertificates(p!.breederId, [...(p!.certificates||[]), c]); setSeed(x=>x+1) }
@@ -21,12 +26,12 @@ export default function BreederDashboard({ breederId='B1' }: { breederId?: strin
           </label>
           <label className="text-sm">Регіон
             <select className="mt-1 w-full rounded border px-2 py-1" value={form.regionCode} onChange={e=> setForm({ ...form, regionCode: e.target.value })}>
-              {UA_REGIONS.map(r=> <option key={r.code} value={r.code}>{r.short}</option>)}
+              {regionsISO.map(r=> <option key={r.code} value={r.code}>{r.short}</option>)}
             </select>
           </label>
           <label className="text-sm">Порода
             <select className="mt-1 w-full rounded border px-2 py-1" value={form.breedDefault} onChange={e=> setForm({ ...form, breedDefault: e.target.value })}>
-              {BREEDS.map(b=> <option key={b.code} value={b.code}>{b.label}</option>)}
+              {breedsActive.map(b=> <option key={b.code} value={b.code}>{b.label}</option>)}
             </select>
           </label>
           <label className="text-sm">Bio

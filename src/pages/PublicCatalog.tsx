@@ -1,14 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { buildIndex, queryIndex } from '../search/index'
 import { add as cartAdd } from '../shop/cart.store'
-import BREEDS from '../constants/breeds'
-import UA_REGIONS from '../constants/regions.ua'
+import UA_REGIONS, { type RegionUA } from '../constants/regions.ua'
+import { listBreeds as dictBreeds, listRegions as dictRegions } from '../state/dictionaries.store'
 import { cached } from '../utils/cache'
 
 export default function PublicCatalog() {
   const [filters, setFilters] = useState<{ breedCode?: string; regionCode?: string; year?: number; minPrice?: number; maxPrice?: number; minRating?: number; hasQA?: boolean; sort?: 'price'|'rating'|'newest' }>({ sort: 'newest' })
   const [results, setResults] = useState(() => buildIndex())
   useEffect(() => { cached('catalog_index', 2000, async () => buildIndex()).then(()=> setResults(queryIndex(filters, filters.sort))) }, [JSON.stringify(filters)])
+  const breeds: Array<{ code: string; label: string }> = useMemo(() =>
+    dictBreeds().filter(b => b.status === 'active').map(b => ({ code: b.code, label: b.label })),
+  [])
+  const regionsISO: RegionUA[] = useMemo(() => {
+    const act = dictRegions().filter(r => r.status === 'active').map(r => UA_REGIONS.find(x => x.slug === r.code)?.code).filter(Boolean) as string[]
+    return UA_REGIONS.filter(r => act.includes(r.code))
+  }, [])
 
   return (
     <div className="p-4 rounded-xl border border-[var(--divider)] bg-[var(--surface)] shadow-sm">
@@ -17,13 +24,13 @@ export default function PublicCatalog() {
         <label className="text-sm">Порода
           <select aria-label="breed" className="mt-1 w-full rounded border px-2 py-1" onChange={(e)=> setFilters(f=> ({ ...f, breedCode: e.target.value || undefined }))}>
             <option value="">Усі</option>
-            {BREEDS.map(b => <option key={b.code} value={b.code}>{b.label}</option>)}
+            {breeds.map(b => <option key={b.code} value={b.code}>{b.label}</option>)}
           </select>
         </label>
         <label className="text-sm">Регіон
           <select aria-label="region" className="mt-1 w-full rounded border px-2 py-1" onChange={(e)=> setFilters(f=> ({ ...f, regionCode: e.target.value || undefined }))}>
             <option value="">Усі</option>
-            {UA_REGIONS.map(r => <option key={r.code} value={r.code}>{r.short}</option>)}
+            {regionsISO.map(r => <option key={r.code} value={r.code}>{r.short}</option>)}
           </select>
         </label>
         <label className="text-sm">Рік

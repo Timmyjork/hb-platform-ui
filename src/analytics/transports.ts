@@ -55,3 +55,8 @@ export async function sendTransferEmail(to: string, payload: { queenId: string; 
   console.log('[MAIL] transfer', to, payload)
   return { ok: true, to, payload }
 }
+
+import { enqueue } from '../infra/queue'
+export async function deliverEmail(to: string, subject: string, body: string): Promise<{ok:true}> { enqueue({ type:'email', to, subject, body }); return { ok: true } }
+export async function deliverSMS(to: string, body: string): Promise<{ok:true}> { enqueue({ type:'sms', to, body }); return { ok: true } }
+export async function deliverWebhook(url: string, payload: any): Promise<{ok:boolean,status?:number}> { enqueue({ type:'webhook', url, payload }); return { ok: true } }

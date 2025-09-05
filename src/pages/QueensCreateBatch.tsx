@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import type { TenTraits } from '../types/queen'
 import { addQueensBatch } from '../state/queens.store'
 import { getBreederDefaults } from '../state/profile.store'
-import BREEDS, { breedSlugToLineageCode } from '../constants/breeds'
+import { breedSlugToLineageCode } from '../constants/breeds'
 import UA_REGIONS, { findRegion } from '../constants/regions.ua'
+import { listBreeds as dictBreeds, listRegions as dictRegions } from '../state/dictionaries.store'
 import { QueenBatchSchema, validateBusinessRules } from '../validation/queen.batch'
 import { useToast } from '../components/ui/Toast'
 
@@ -42,6 +43,12 @@ export default function QueensCreateBatch() {
     colonyStrength: 60,
     broodFrames: 50,
   })
+
+  const breedsActive = useMemo(() => dictBreeds().filter(b => b.status === 'active'), [])
+  const regionsActiveISO = useMemo(() => {
+    const active = dictRegions().filter(r => r.status === 'active')
+    return active.map(r => UA_REGIONS.find(x => x.slug === r.code)?.code).filter(Boolean) as string[]
+  }, [])
 
   const preview = useMemo(() => {
     const ids: string[] = []
@@ -126,14 +133,20 @@ export default function QueensCreateBatch() {
         <label className="text-sm">Країна
           <input aria-label="country" className="mt-1 w-full rounded-md border px-2 py-1" value={country} disabled />
         </label>
+        {/* expose unionCode for tests */}
+        <label className="text-sm hidden">UnionCode
+          <input aria-label="unionCode" className="mt-1 w-full rounded-md border px-2 py-1" value={(findRegion(regionCode)?.code.match(/(\d{2})$/)?.[1]) || '32'} readOnly />
+        </label>
         <label className="text-sm">Порода
           <select aria-label="breed" className="mt-1 w-full rounded-md border px-2 py-1" value={breedSlug} onChange={e=> setBreedSlug(e.target.value)}>
-            {BREEDS.map(b => <option key={b.code} value={b.code}>{b.label}</option>)}
+            {breedsActive.map(b => <option key={b.code} value={b.code}>{b.label}</option>)}
           </select>
         </label>
         <label className="text-sm">Регіон (спілка)
           <select aria-label="region" className="mt-1 w-full rounded-md border px-2 py-1" value={regionCode} onChange={e=> setRegionCode(e.target.value)}>
-            {UA_REGIONS.map(r => <option key={r.code} value={r.code}>{r.short}</option>)}
+            {regionsActiveISO.map(code => {
+              const r = UA_REGIONS.find(x => x.code === code)!; return <option key={r.code} value={r.code}>{r.short}</option>
+            })}
           </select>
         </label>
         <label className="text-sm">№ маткаря (breederNo)

@@ -15,7 +15,7 @@ function loadIdIndex(): Set<string> {
       idIndex = new Set<string>(JSON.parse(raw) as string[])
       return idIndex
     }
-  } catch {}
+  } catch (_e) { void 0 }
   // Fallback: derive from current queens
   const ids = new Set<string>(read().map(q => q.id))
   idIndex = ids

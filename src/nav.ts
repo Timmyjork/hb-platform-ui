@@ -48,6 +48,8 @@ export const NAV_BY_ROLE: Record<RoleKey, NavItem[]> = {
     { id: 'settings', label: 'Профіль / Налаштування' },
   ],
   internal: [
+    { id: 'admin_dictionaries', label: 'Адмін / Довідники' },
+    { id: 'admin_moderation', label: 'Адмін / Модерація' },
     { id: 'moderation', label: 'Модерація' },
     { id: 'kyc_moderation', label: 'KYC модерація' },
     { id: 'users_roles', label: 'Користувачі/Ролі' },

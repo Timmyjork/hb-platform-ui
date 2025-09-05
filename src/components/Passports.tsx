@@ -1,10 +1,6 @@
 import { queensToCSV } from './utils/csv'
 import type { Queen } from '../types/queen'
 
-export function downloadPassportsCSV(rows: Queen[]): string {
-  return queensToCSV(rows)
-}
-
 export default function PassportsButton({ rows }: { rows: Queen[] }) {
   function onDownload() {
     const csv = queensToCSV(rows)
@@ -18,4 +14,3 @@ export default function PassportsButton({ rows }: { rows: Queen[] }) {
   }
   return <button className="rounded-md border px-3 py-1.5" onClick={onDownload}>Завантажити паспорт</button>
 }
-

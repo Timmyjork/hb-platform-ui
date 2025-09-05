@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ToastProvider, useToast } from "./components/ui/Toast";
 import { AuthProvider, useAuth } from './auth/useAuth'
 import AuthMenu from './auth/AuthMenu'
-import { NAV_BY_ROLE, type RoleKey as NewRoleKey } from './nav'
+import { NAV_BY_ROLE, type RoleKey as NewRoleKey } from './infra/rbac'
 import DataTable from "./components/table/DataTable";
 import type { Row as QueenRow } from "./components/table/DataTable";
 import Button from "./components/ui/Button";
@@ -12,6 +12,8 @@ import HiveCard from "./pages/HiveCard";
 import AnalyticsRatings from "./pages/AnalyticsRatings";
 import AnalyticsRegional from "./pages/AnalyticsRegional";
 import AnalyticsAlerts from "./pages/AnalyticsAlerts";
+import Analytics from "./pages/Analytics";
+import AnalyticsReadOnly from './pages/AnalyticsReadOnly'
 import AnalyticsWhatIf from "./pages/AnalyticsWhatIf";
 import QueensCreateBatch from "./pages/QueensCreateBatch";
 import Observations from './pages/Observations'
@@ -22,8 +24,22 @@ import BreederListings from './pages/BreederListings'
 import BreederKYC from './pages/BreederKYC'
 import KYCModeration from './pages/KYCModeration'
 import Orders from './pages/Orders'
+import Transfer from './pages/Transfer'
+import ImportExport from './pages/ImportExport'
+import ExportCenter from './pages/ExportCenter'
+import SettingsDev from './pages/SettingsDev'
 import Moderation from './pages/Moderation'
 import BreederDashboard from './pages/BreederDashboard'
+import BreedersCatalog from './pages/BreedersCatalog'
+import BreederPublic from './pages/BreederPublic'
+import QueenPublic from './pages/QueenPublic'
+import AdminDictionaries from './pages/AdminDictionaries'
+import AdminModeration from './pages/AdminModeration'
+import AdminReviews from './pages/AdminReviews'
+import AdminQA from './pages/AdminQA'
+import AdminBreeders from './pages/AdminBreeders'
+import AdminDicts from './pages/AdminDicts'
+import AdminAudit from './pages/AdminAudit'
 
 // New RBAC-based nav lives in src/nav.ts
 
@@ -179,18 +195,37 @@ function Shell() {
             {/* Нова партія маток (breeder) */}
             {roleLocal === "breeder" && current === "queens_batch" && <QueensCreateBatch />}
 
-            {/* Магазин */}
+            {/* Публічні маршрути (спрощено без роутера) */}
+            {typeof window !== 'undefined' && window.location.pathname.startsWith('/breeders') && <BreedersCatalog />}
+            {typeof window !== 'undefined' && window.location.pathname.startsWith('/breeder/') && <BreederPublic />}
+            {typeof window !== 'undefined' && (window.location.pathname.startsWith('/q/') || window.location.pathname.startsWith('/queen/')) && <QueenPublic />}
+
+            {/* Магазин / Покупки */}
             {['guest','buyer','breeder','regional_admin'].includes(roleLocal) && current === 'shop' && <Shop />}
             {['buyer'].includes(roleLocal) && current === 'cart' && <Cart />}
             {['buyer'].includes(roleLocal) && current === 'checkout' && <Checkout />}
-            {roleLocal === 'breeder' && current === 'breeder_listings' && <BreederListings />}
+            {/* Buyer/Regional readonly analytics + export */}
+            {['buyer','regional_admin'].includes(roleLocal) && current === 'analytics_readonly' && <AnalyticsReadOnly />}
+            {['guest','buyer','regional_admin'].includes(roleLocal) && current === 'ratings_public' && <AnalyticsRatings />}
+            {['buyer','regional_admin'].includes(roleLocal) && current === 'export_center' && <ExportCenter />}
+            {/* Breeder profile & tools */}
+            {roleLocal === 'breeder' && current === 'listings' && <BreederListings />}
+            {roleLocal === 'breeder' && current === 'profile_breeder' && <BreederDashboard />}
+            {roleLocal === 'breeder' && current === 'transfer' && <Transfer />}
+            {roleLocal === 'breeder' && current === 'import_export' && <ImportExport />}
             {roleLocal === 'breeder' && current === 'kyc' && <BreederKYC />}
             {roleLocal === 'internal' && current === 'kyc_moderation' && <KYCModeration />}
+            {roleLocal === 'internal' && current === 'admin_dictionaries' && <AdminDictionaries />}
+            {roleLocal === 'internal' && current === 'admin_moderation' && <AdminModeration />}
+            {roleLocal === 'internal' && current === 'admin_reviews' && <AdminReviews />}
+            {roleLocal === 'internal' && current === 'admin_qa' && <AdminQA />}
+            {roleLocal === 'internal' && current === 'admin_breeders' && <AdminBreeders />}
+            {roleLocal === 'internal' && current === 'admin_dicts' && <AdminDicts />}
+            {roleLocal === 'internal' && current === 'admin_audit' && <AdminAudit />}
             {['internal','regional_admin'].includes(roleLocal) && current === 'moderation' && <Moderation />}
-            {roleLocal === 'breeder' && current === 'breeder_dashboard' && <BreederDashboard />}
-
-            {roleLocal === 'breeder' && current === 'breeder_listings' && <BreederListings />}
+            {/* Legacy mapping removed per RBAC_NAV_V1.FINAL */}
             {['buyer','breeder','regional_admin'].includes(roleLocal) && current === 'orders' && <Orders />}
+            
 
             {/* Аналітика — What-if */}
             {current === "analytics_whatif" && <AnalyticsWhatIf />}
@@ -208,6 +243,8 @@ function Shell() {
                 Тут скоро з’явиться функціонал. Поки що — плейсхолдер.
               </div>
             )}
+            {current === 'breeders' && <BreedersCatalog />}
+            {current === 'settings_dev' && <SettingsDev />}
           </main>
         </div>
       </div>

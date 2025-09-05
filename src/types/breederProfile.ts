@@ -25,6 +25,8 @@ export type BreederProfile = {
   }
   certificates: Certificate[]
   ratingsPublic: boolean
+  verification?: 'unverified'|'pending'|'verified'|'rejected'
+  publicSlug?: string
   createdAt: string
   updatedAt: string
 }
@@ -38,6 +40,7 @@ export type Review = {
   text: string
   createdAt: string
   verifiedPurchase?: boolean
+  status: 'pending'|'approved'|'rejected'
 }
 
 export type QAQuestion = {
@@ -46,6 +49,7 @@ export type QAQuestion = {
   authorUserId: string
   text: string
   createdAt: string
+  status: 'pending'|'approved'|'rejected'
   answer?: {
     text: string
     authorBreederId: BreederId

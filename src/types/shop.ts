@@ -1,15 +1,33 @@
 import type { TenTraits, QueenId } from '../types/queen'
 
+export type ListingStatus = 'active'|'paused'|'soldout'|'archived'
+
+export type ShopListingV18 = {
+  id: string
+  breederId: string
+  queenMotherId: string
+  title: string
+  priceUAH: number
+  stock: number
+  year: number
+  breedCode: string
+  regionCode: string
+  status: ListingStatus
+  createdAt: string
+  updatedAt: string
+  seoSlug: string
+}
+
+// Legacy listing used across existing codebase (preserve name)
 export type Listing = {
   listingId: string
   sellerId: string
   motherId?: QueenId
-  // If specific queens are listed, include their ids; otherwise stock represents daughters to be generated
   queenIds?: QueenId[]
   stock: number
   price: number
-  breedCode: string // numeric lineage as string 1..99
-  regionCode: string // ISO UA-XX
+  breedCode: string
+  regionCode: string
   year: number
   traits?: TenTraits
   active: boolean
@@ -45,4 +63,3 @@ export type BreederKYC = {
   status: 'none'|'pending'|'verified'|'rejected'
   updatedAt: string
 }
-

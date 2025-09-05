@@ -24,7 +24,8 @@ describe('queenId utils', () => {
   })
 
   it('round-trips build/parse/normalize', () => {
-    const messy = ' ua.7.45.1.25.2025 '\n    const norm = normalizeId(messy)
+    const messy = ' ua.7.45.1.25.2025 \n'
+    const norm = normalizeId(messy)
     expect(norm).toBe('UA.7.45.1.25.2025')
     const parts = parseQueenId(norm)
     expect(parts?.queenNo).toBe('25')

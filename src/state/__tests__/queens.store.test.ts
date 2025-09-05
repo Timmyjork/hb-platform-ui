@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { addQueensBatch, listQueens, transferOwnership, saveQueens } from '../queens.store'
-import { importQueensCSV, queensToCSV } from '../../components/utils/csv'
+import { importQueensCSV } from '../../components/utils/csv'
 
 describe('queens.store', () => {
   beforeEach(() => { localStorage.clear() })

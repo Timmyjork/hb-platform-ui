@@ -56,3 +56,36 @@ export function fulfillListing(listingId: string, buyerUserId: string, qty: numb
   return taken
 }
 
+// ——— V18 Listings API (separate storage)
+import type { ShopListingV18 as Listing, ListingStatus } from '../types/shop'
+import { normalize as slugify } from '../utils/slug'
+
+const LS_V18 = 'hb.v18.listings'
+function readV18(): Listing[] { try { const raw = localStorage.getItem(LS_V18); return raw? JSON.parse(raw) as Listing[]: [] } catch { return [] } }
+function writeV18(rows: Listing[]): Listing[] { localStorage.setItem(LS_V18, JSON.stringify(rows)); return rows }
+
+export function v18_listListings(filter?: Partial<{ status: ListingStatus; breedCode: string; regionCode: string; q: string }>): Listing[] {
+  let rows = readV18()
+  if (filter?.status) rows = rows.filter(r => r.status === filter.status)
+  if (filter?.breedCode) rows = rows.filter(r => r.breedCode === filter.breedCode)
+  if (filter?.regionCode) rows = rows.filter(r => r.regionCode === filter.regionCode)
+  if (filter?.q) { const q = filter.q.toLowerCase(); rows = rows.filter(r => r.title.toLowerCase().includes(q) || r.seoSlug.includes(q)) }
+  return rows
+}
+export function v18_getListing(id: string): Listing | null { const row = readV18().find(r => r.id === id || r.seoSlug === id); return row || null }
+export function v18_saveListing(l: Listing): void { const rows = readV18(); const i = rows.findIndex(r => r.id===l.id); const now = new Date().toISOString(); const next = { ...l, updatedAt: now, createdAt: l.createdAt || now }; if (i>=0) rows[i]=next; else rows.unshift(next); writeV18(rows) }
+export function v18_createListing(input: Omit<Listing,'id'|'createdAt'|'updatedAt'|'seoSlug'|'status'> & { status?: ListingStatus }): Listing {
+  const now = new Date().toISOString()
+  const id = `L_${Date.now()}_${Math.random().toString(36).slice(2,6)}`
+  const status: ListingStatus = input.status || 'active'
+  const seoSlug = slugify(`${input.title}-${id.slice(-4)}`)
+  const row: Listing = { ...input, id, status, seoSlug, createdAt: now, updatedAt: now }
+  const rows = readV18(); rows.unshift(row); writeV18(rows); return row
+}
+export function v18_updateStock(id: string, delta: number): void { const rows = readV18(); const i = rows.findIndex(r => r.id===id); if (i===-1) return; rows[i] = { ...rows[i], stock: Math.max(0, rows[i].stock + delta), updatedAt: new Date().toISOString(), status: Math.max(0, rows[i].stock + delta)===0? 'soldout': rows[i].status }; writeV18(rows) }
+export function v18_pauseListing(id: string): void { const rows = readV18(); const i = rows.findIndex(r => r.id===id); if (i===-1) return; rows[i] = { ...rows[i], status: 'paused', updatedAt: new Date().toISOString() }; writeV18(rows) }
+export function v18_archiveListing(id: string): void { const rows = readV18(); const i = rows.findIndex(r => r.id===id); if (i===-1) return; rows[i] = { ...rows[i], status: 'archived', updatedAt: new Date().toISOString() }; writeV18(rows) }
+export function v18_seedDemoListings(): void { if (readV18().length) return; const base: Array<Omit<Listing,'id'|'createdAt'|'updatedAt'|'seoSlug'|'status'>> = [
+  { breederId:'B1', queenMotherId:'UA.7.45.1.1.2025', title:'Карніка доньки', priceUAH:1200, stock:8, year:2025, breedCode:'1', regionCode:'UA-32' },
+  { breederId:'B2', queenMotherId:'UA.2.46.2.1.2025', title:'Карпатка доньки', priceUAH:1000, stock:5, year:2025, breedCode:'2', regionCode:'UA-46' },
+]; for (const x of base) v18_createListing(x) }

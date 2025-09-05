@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getProfile, saveProfile, type BreederProfile, getBreederDefaults } from '../state/profile.store'
-import BREEDS, { matchBreed } from '../constants/breeds'
 import UA_REGIONS from '../constants/regions.ua'
+import { listBreeds as dictBreeds, listRegions as dictRegions } from '../state/dictionaries.store'
+import { matchBreed } from '../utils/dictionaries.helpers'
 
 export default function ProfilePage() {
   const [p, setP] = useState<BreederProfile>(() => getProfile('currentUser'))
   useEffect(()=>{ setP(getProfile('currentUser')) }, [])
 
-  const breeds = useMemo(()=> BREEDS, [])
-  const regions = useMemo(()=> UA_REGIONS, [])
+  const breeds = useMemo(()=> dictBreeds().filter(b => b.status==='active'), [])
+  const regions = useMemo(()=> {
+    const act = dictRegions().filter(r => r.status==='active').map(r => UA_REGIONS.find(x => x.slug === r.code)?.code).filter(Boolean) as string[]
+    return UA_REGIONS.filter(r => act.includes(r.code))
+  }, [])
 
   function save() {
     const next: BreederProfile = {
@@ -45,4 +49,3 @@ export default function ProfilePage() {
     </div>
   )
 }
-

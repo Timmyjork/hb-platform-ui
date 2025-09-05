@@ -1,0 +1,43 @@
+{
+  "guest": [
+    { "id": "shop", "label": "Магазин", "public": true },
+    { "id": "ratings_public", "label": "Рейтинги", "public": true }
+  ],
+  "buyer": [
+    { "id": "shop", "label": "Магазин", "public": true },
+    { "id": "my_queens", "label": "Мої матки" },
+    { "id": "observations", "label": "Спостереження (вуликова карта)" },
+    { "id": "analytics_readonly", "label": "Аналітика (read-only)" },
+    { "id": "ratings_public", "label": "Рейтинги" },
+    { "id": "export_center", "label": "Експорт" }
+  ],
+  "breeder": [
+    { "id": "profile_breeder", "label": "Мій профіль" },
+    { "id": "queens_batch", "label": "Нова партія" },
+    { "id": "observations", "label": "Спостереження (вуликова карта)" },
+    { "id": "listings", "label": "Лістинги" },
+    { "id": "orders", "label": "Замовлення" },
+    { "id": "transfer", "label": "Передача" },
+    { "id": "analytics_ratings", "label": "Рейтинги" },
+    { "id": "analytics_regional", "label": "Регіони" },
+    { "id": "analytics_alerts", "label": "Алерти" },
+    { "id": "import_export", "label": "Імпорт / Експорт" }
+  ],
+  "regional_admin": [
+    { "id": "shop", "label": "Магазин", "public": true },
+    { "id": "my_queens", "label": "Мої матки" },
+    { "id": "observations", "label": "Спостереження (вуликова карта)" },
+    { "id": "analytics_readonly", "label": "Аналітика (read-only)" },
+    { "id": "ratings_public", "label": "Рейтинги" },
+    { "id": "analytics_regional", "label": "Регіони" },
+    { "id": "analytics_alerts", "label": "Алерти" },
+    { "id": "export_center", "label": "Експорт" }
+  ],
+  "internal": [
+    { "id": "admin_reviews", "label": "Адмін / Відгуки" },
+    { "id": "admin_qa", "label": "Адмін / Q&A" },
+    { "id": "admin_breeders", "label": "Адмін / Профілі" },
+    { "id": "admin_dicts", "label": "Адмін / Довідники" },
+    { "id": "admin_audit", "label": "Адмін / Аудит" }
+  ]
+}

@@ -21,4 +21,3 @@ describe('profile store and auto-prefill', () => {
     expect(Number(union.value)).toBeGreaterThanOrEqual(1)
   })
 })
-

@@ -40,6 +40,7 @@ export default function PublicBreeder({ breederId = 'B1' }: { breederId?: string
   return (
     <div className="p-4 rounded-xl border border-[var(--divider)] bg-[var(--surface)] shadow-sm">
       <h1 className="text-xl font-semibold">Публічний профіль маткаря {breederId}</h1>
+      <div className="mt-1 text-xs">Бейдж: <span className="inline-block rounded border px-2 py-0.5 text-[10px] align-middle">Верифікація (демо)</span></div>
       <div className="mt-2 text-sm">Рейтинг: <b>{avg.toFixed(1)}</b> із {reviews.length} відгуків</div>
       <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
         <section>
@@ -78,6 +79,7 @@ export default function PublicBreeder({ breederId = 'B1' }: { breederId?: string
           </form>
         </section>
       </div>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context':'https://schema.org', '@type':'Person', name: breederId }) }} />
     </div>
   )
 }
