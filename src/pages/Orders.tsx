@@ -11,7 +11,7 @@ export default function Orders() {
     if (isBuyer) return listBuyerOrders(user?.id || 'Buyer-1')
     if (isBreeder) return listBreederOrders(user?.id || 'B1')
     return []
-  }, [role, user, seed])
+  }, [role, user, seed, isBuyer, isBreeder])
   return (
     <div className="p-4 rounded-xl border border-[var(--divider)] bg-[var(--surface)] shadow-sm">
       <h1 className="text-xl font-semibold">Замовлення</h1>

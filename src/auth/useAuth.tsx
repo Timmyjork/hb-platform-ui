@@ -58,10 +58,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     setUser(null)
-    try { localStorage.removeItem(LS_KEY) } catch {}
+    try { localStorage.removeItem(LS_KEY) } catch (_e) { /* ignore */ }
     // Reset role to guest on logout and persist UI role for shell/nav
     setRoleState('guest')
-    try { localStorage.setItem('ui.role', 'guest') } catch {}
+    try { localStorage.setItem('ui.role', 'guest') } catch (_e) { /* ignore */ }
   }, []);
 
   const setRole = useCallback<Ctx["setRole"]>((r) => {

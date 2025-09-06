@@ -20,6 +20,7 @@ export default function AuthMenu({ onRoleSync }: { onRoleSync: (r: RoleKey) => v
   const [provider, setProvider] = useState<"google" | "facebook" | "email">("email");
   const [email, setEmail] = useState(user?.email ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
+  const canContinue = Boolean(provider) && Boolean(email || phone)
 
   const doLogin = () => {
     login({
@@ -92,7 +93,7 @@ export default function AuthMenu({ onRoleSync }: { onRoleSync: (r: RoleKey) => v
                   className="rounded-md border border-[var(--divider)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--primary)]"
                 />
               </div>
-              <Button onClick={doLogin}>Продовжити</Button>
+              <Button onClick={doLogin} disabled={!canContinue}>Продовжити</Button>
             </div>
           </Modal>
         )}
@@ -105,7 +106,7 @@ export default function AuthMenu({ onRoleSync }: { onRoleSync: (r: RoleKey) => v
     <div className="relative">
       <details className="group">
         <summary className="list-none cursor-pointer rounded-md border border-[var(--divider)] bg-[var(--surface)] px-3 py-1.5 text-sm hover:bg-gray-50">
-          {user.name || user.email || "Аккаунт"}
+          {user.name || user.email || "Гість"}
         </summary>
         <div className="absolute right-0 mt-1 w-56 rounded-md border border-[var(--divider)] bg-[var(--surface)] p-2 shadow-md">
           <div className="mb-2 text-xs text-[var(--secondary)]">{user.email || user.phone || user.provider}</div>
@@ -126,11 +127,8 @@ export default function AuthMenu({ onRoleSync }: { onRoleSync: (r: RoleKey) => v
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div
-        className="w-full max-w-md rounded-xl border border-[var(--divider)] bg-[var(--surface)] p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4" onClick={onClose} role="dialog" aria-modal="true" onKeyDown={(e)=>{ if (e.key==='Escape') onClose() }} tabIndex={-1}>
+      <div className="w-full max-w-md rounded-xl border border-[var(--divider)] bg-[var(--surface)] p-4" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
           <div className="text-sm font-semibold">{title}</div>
           <button onClick={onClose} className="rounded px-2 py-1 text-sm hover:bg-gray-100">✕</button>

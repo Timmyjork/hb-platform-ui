@@ -55,7 +55,7 @@ export async function transferOrder(orderId: string): Promise<V2Order | null> {
   }
   const issued = await processPaidOrder(flow)
   // Reduce stock on transfer for MVP safety
-  for (const it of rows[i].items) { try { reserveListing(it.listingId, it.qty) } catch {} }
+  for (const it of rows[i].items) { try { reserveListing(it.listingId, it.qty) } catch (_e) { /* ignore */ } }
   // Attach queenIds
   const perItem: Record<string,string[]> = {}
   for (const q of issued) {

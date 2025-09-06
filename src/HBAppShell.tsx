@@ -74,6 +74,23 @@ function Shell() {
     return off
   }, [])
   useEffect(() => {
+    // Role aliases via URL: ?role= has highest priority; then pathname aliases
+    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+    const qRole = params.get('role') as StoreRoleKey | null
+    const path = typeof window !== 'undefined' ? window.location.pathname : ''
+    const aliasMap: Record<string, StoreRoleKey> = {
+      '/pasichnik': 'buyer', '/buyer': 'buyer',
+      '/matkar': 'breeder', '/breeder': 'breeder',
+      '/golova': 'regional_admin', '/regional_admin': 'regional_admin',
+      '/guest': 'guest',
+      '/admin': 'internal', '/local_admin': 'internal',
+    }
+    let aliasRole: StoreRoleKey | null = null
+    for (const [alias, r] of Object.entries(aliasMap)) { if (path.endsWith(alias)) { aliasRole = r; break } }
+    const nextRole = (qRole || aliasRole)
+    if (nextRole) { try { localStorage.setItem('hb.role', nextRole) } catch (_e) { /* ignore */ }; setProfileRole(nextRole) }
+  }, [])
+  useEffect(() => {
     if (!items.length) return
     if (!items.some(i => i.id === active)) {
       setActive(items[0]?.id ?? 'shop')
@@ -115,10 +132,14 @@ function Shell() {
               />
             </div>
             <div className="ml-auto flex items-center gap-3">
+              <button className="hidden md:inline rounded-md border border-[var(--divider)] bg-[var(--surface)] px-3 py-1.5 text-sm hover:bg-gray-50" onClick={()=> setActive('shop')}>Магазин</button>
+              {(role==='buyer' || role==='breeder') && (
+                <button className="hidden md:inline rounded-md border border-[var(--divider)] bg-[var(--surface)] px-3 py-1.5 text-sm hover:bg-gray-50" onClick={()=> setActive(role==='breeder' ? 'breeder_dashboard':'my_queens')}>Мій профіль</button>
+              )}
               <CartButton onClick={() => setActive('cart')} />
               <AuthMenu onRoleSync={() => { /* role changes propagate via context */ }} />
               <div className="hidden">
-                <RoleSelector value={role} onChange={(v) => { try { localStorage.setItem('ui.role', v) } catch (_e) {}; setProfileRole(v as StoreRoleKey) }} />
+                <RoleSelector value={role} onChange={(v) => { try { localStorage.setItem('ui.role', v) } catch (_e) { /* ignore */ }; setProfileRole(v as StoreRoleKey) }} />
               </div>
             </div>
           </div>

@@ -72,21 +72,21 @@ const LS_AUTH = 'hb.auth'
 let auth: CurrentUser | null = null
 const listeners = new Set<() => void>()
 
-function emitAuth() { listeners.forEach(fn => { try { fn() } catch {} }) }
+function emitAuth() { listeners.forEach(fn => { try { fn() } catch (_e) { /* ignore */ } }) }
 
 export function getAuth(): CurrentUser {
   if (auth) return auth
   try {
     const raw = localStorage.getItem(LS_AUTH)
     if (raw) { auth = JSON.parse(raw) as CurrentUser; return auth }
-  } catch {}
+  } catch (_e) { /* ignore */ }
   auth = { id: null, email: null, role: 'guest' }
   return auth
 }
 
 function setAuth(next: CurrentUser) {
   auth = next
-  try { localStorage.setItem(LS_AUTH, JSON.stringify(next)) } catch {}
+  try { localStorage.setItem(LS_AUTH, JSON.stringify(next)) } catch (_e) { /* ignore */ }
   emitAuth()
 }
 
@@ -111,7 +111,7 @@ export function loginAsBreeder(email?: string): CurrentUser {
 
 export function logout(): void {
   setAuth({ id: null, email: null, role: 'guest' })
-  try { localStorage.removeItem(LS_AUTH); localStorage.removeItem('hb.role') } catch {}
+  try { localStorage.removeItem(LS_AUTH); localStorage.removeItem('hb.role') } catch (_e) { /* ignore */ }
 }
 
 export function setRole(r: RoleKey): void {
