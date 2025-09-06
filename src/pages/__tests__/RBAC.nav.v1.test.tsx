@@ -8,12 +8,12 @@ function expectOnlyVisible(nav: HTMLElement, labels: string[]) {
 }
 
 describe('RBAC_NAV_V1', () => {
-  it('guest: shop + ratings_public only', () => {
+  it('guest: shop + cart + ratings_public', () => {
     render(<HBAppShell />)
     const roleSel = screen.getByLabelText('Оберіть роль') as HTMLSelectElement
     fireEvent.change(roleSel, { target: { value: 'guest' } })
     const nav = screen.getByTestId('nav')
-    expectOnlyVisible(nav, ['Магазин','Рейтинги'])
+    expectOnlyVisible(nav, ['Магазин','Кошик','Рейтинги'])
     // click Ratings
     fireEvent.click(within(nav).getByRole('button', { name: 'Рейтинги' }))
     // Page renders
@@ -59,4 +59,3 @@ describe('RBAC_NAV_V1', () => {
     expectOnlyVisible(nav, ['Адмін / Відгуки', 'Адмін / Q&A', 'Адмін / Профілі', 'Адмін / Довідники', 'Адмін / Аудит'])
   })
 })
-

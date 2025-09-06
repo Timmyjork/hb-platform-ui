@@ -6,6 +6,7 @@ import { NAV_BY_ROLE, type RoleKey as NewRoleKey } from './infra/rbac'
 import DataTable from "./components/table/DataTable";
 import type { Row as QueenRow } from "./components/table/DataTable";
 import Button from "./components/ui/Button";
+import CartButton from "./components/ui/CartButton";
 import BeekeeperQueens from "./pages/BeekeeperQueens";
 // keep Phenotypes imported by tests in other places via wrapper page
 import HiveCard from "./pages/HiveCard";
@@ -106,6 +107,7 @@ function Shell() {
               />
             </div>
             <div className="ml-auto flex items-center gap-3">
+              <CartButton onClick={() => setActive('cart')} />
               <AuthMenu onRoleSync={() => { /* role changes propagate via context */ }} />
               <div className="hidden">
                 <RoleSelector value={role} onChange={(v) => { setRole(v); try { localStorage.setItem('ui.role', v) } catch (_e) { /* ignore */ } }} />
@@ -196,7 +198,7 @@ function Shell() {
 
             {/* Магазин / Покупки */}
             {['guest','buyer','breeder','regional_admin'].includes(role) && current === 'shop' && <Shop />}
-            {role === 'buyer' && current === 'cart' && <Cart />}
+            {current === 'cart' && <Cart />}
             {role === 'buyer' && current === 'checkout' && <Checkout />}
             {/* Buyer/Regional readonly analytics + export */}
             {['buyer','regional_admin'].includes(role) && current === 'analytics_readonly' && <AnalyticsReadOnly />}

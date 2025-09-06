@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { buildIndex, queryIndex } from '../search/index'
-import { add as cartAdd } from '../shop/cart.store'
+import { cart as cartStore } from '../shop/cart.store'
 import UA_REGIONS, { type RegionUA } from '../constants/regions.ua'
 import { listBreeds as dictBreeds, listRegions as dictRegions } from '../state/dictionaries.store'
 import { cached } from '../utils/cache'
@@ -66,7 +66,7 @@ export default function PublicCatalog() {
                 <td className="px-3 py-2">{r.year}</td>
                 <td className="px-3 py-2">{r.price}</td>
                 <td className="px-3 py-2">{r.ratingAvg.toFixed(1)} ({r.ratingCount})</td>
-                <td className="px-3 py-2 text-right"><button className="rounded-md border px-3 py-1.5" onClick={()=>{ cartAdd('Buyer-1', r.id, 1); alert('Додано в кошик') }}>У кошик</button></td>
+                <td className="px-3 py-2 text-right"><button className="rounded-md border px-3 py-1.5" onClick={()=>{ cartStore.add({ listingId: r.id, title: `${r.breedCode.toUpperCase()} • ${r.year}`, priceUAH: r.price, sellerId: 'B1', max: 99 }, 1); alert('Додано в кошик') }}>У кошик</button></td>
               </tr>
             ))}
           </tbody>

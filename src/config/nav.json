@@ -1,10 +1,12 @@
 {
   "guest": [
     { "id": "shop", "label": "Магазин", "public": true },
+    { "id": "cart", "label": "Кошик", "public": true },
     { "id": "ratings_public", "label": "Рейтинги", "public": true }
   ],
   "buyer": [
     { "id": "shop", "label": "Магазин", "public": true },
+    { "id": "cart", "label": "Кошик" },
     { "id": "my_queens", "label": "Мої матки" },
     { "id": "observations", "label": "Спостереження (вуликова карта)" },
     { "id": "analytics_readonly", "label": "Аналітика (read-only)" },

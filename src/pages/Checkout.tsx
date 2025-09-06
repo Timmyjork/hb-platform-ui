@@ -1,10 +1,10 @@
-import { getCart, clear as clearCart } from '../shop/cart.store'
+import { getCart, cart as cartStore } from '../shop/cart.store'
 import { createDraft, place, payMock, markTransferred } from '../shop/orders.store'
 import { processPaidOrder } from '../shop/flow'
 
 export default function Checkout() {
   const buyer = 'Buyer-1'
-  const cart = getCart(buyer)
+  const cart = getCart()
   const total = cart.reduce((s,r)=> s + r.qty * 0, 0)
   async function onPay() {
     const draft = createDraft(buyer, cart)
@@ -13,7 +13,7 @@ export default function Checkout() {
     if (paid.payment.status === 'succeeded') {
       const issued = await processPaidOrder(paid)
       markTransferred(paid.id, issued)
-      clearCart(buyer)
+      cartStore.clear()
       alert('Оплачено і передано')
     } else {
       alert('Оплата неуспішна')

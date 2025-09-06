@@ -5,6 +5,7 @@ export type NavItem = { id: string; label: string }
 export const NAV_BY_ROLE: Record<RoleKey, NavItem[]> = {
   guest: [
     { id: 'shop', label: 'Магазин' },
+    { id: 'cart', label: 'Кошик' },
     { id: 'analytics_ratings', label: 'Рейтинги' },
   ],
   buyer: [
