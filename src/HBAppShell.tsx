@@ -60,17 +60,16 @@ const demoRows: QueenRow[] = [
 
 function Shell() {
   const { role, setRole } = useAuth()
-  const [roleLocal, setRoleLocal] = useState<NewRoleKey>('breeder')
-  const [active, setActive] = useState<string>('dashboard')
-  const items = useMemo(() => NAV_BY_ROLE[roleLocal] ?? [], [roleLocal])
+  const [active, setActive] = useState<string>('shop')
+  const items = useMemo(() => NAV_BY_ROLE[role] ?? [], [role])
   const isValid = items.some(i => i.id === active)
-  const current = isValid ? active : (items[0]?.id ?? 'dashboard')
+  const current = isValid ? active : (items[0]?.id ?? 'shop')
   useEffect(() => {
-    if (!items.length) return;
+    if (!items.length) return
     if (!items.some(i => i.id === active)) {
-      setActive(items[0].id)
+      setActive(items[0]?.id ?? 'shop')
     }
-  }, [roleLocal, items, active])
+  }, [role, items, active])
   const nav = useMemo(() => items, [items])
 
   return (
@@ -109,7 +108,7 @@ function Shell() {
             <div className="ml-auto flex items-center gap-3">
               <AuthMenu onRoleSync={() => { /* role changes propagate via context */ }} />
               <div className="hidden">
-                <RoleSelector value={roleLocal} onChange={(v) => { setRoleLocal(v); setRole(v) }} />
+                <RoleSelector value={role} onChange={(v) => { setRole(v); try { localStorage.setItem('ui.role', v) } catch (_e) { /* ignore */ } }} />
               </div>
             </div>
           </div>
@@ -188,7 +187,7 @@ function Shell() {
             {current === "hive_card" && <HiveCard />}
 
             {/* Нова партія маток (breeder) */}
-            {roleLocal === "breeder" && current === "queens_batch" && <QueensCreateBatch />}
+            {role === "breeder" && current === "queens_batch" && <QueensCreateBatch />}
 
             {/* Публічні маршрути (спрощено без роутера) */}
             {typeof window !== 'undefined' && window.location.pathname.startsWith('/breeders') && <BreedersCatalog />}
@@ -196,30 +195,30 @@ function Shell() {
             {typeof window !== 'undefined' && (window.location.pathname.startsWith('/q/') || window.location.pathname.startsWith('/queen/')) && <QueenPublic />}
 
             {/* Магазин / Покупки */}
-            {['guest','buyer','breeder','regional_admin'].includes(roleLocal) && current === 'shop' && <Shop />}
-            {['buyer'].includes(roleLocal) && current === 'cart' && <Cart />}
-            {['buyer'].includes(roleLocal) && current === 'checkout' && <Checkout />}
+            {['guest','buyer','breeder','regional_admin'].includes(role) && current === 'shop' && <Shop />}
+            {role === 'buyer' && current === 'cart' && <Cart />}
+            {role === 'buyer' && current === 'checkout' && <Checkout />}
             {/* Buyer/Regional readonly analytics + export */}
-            {['buyer','regional_admin'].includes(roleLocal) && current === 'analytics_readonly' && <AnalyticsReadOnly />}
-            {['guest','buyer','regional_admin'].includes(roleLocal) && current === 'ratings_public' && <AnalyticsRatings />}
-            {['buyer','regional_admin'].includes(roleLocal) && current === 'export_center' && <ExportCenter />}
+            {['buyer','regional_admin'].includes(role) && current === 'analytics_readonly' && <AnalyticsReadOnly />}
+            {['guest','buyer','regional_admin'].includes(role) && current === 'ratings_public' && <AnalyticsRatings />}
+            {['buyer','regional_admin'].includes(role) && current === 'export_center' && <ExportCenter />}
             {/* Breeder profile & tools */}
-            {roleLocal === 'breeder' && current === 'listings' && <BreederListings />}
-            {roleLocal === 'breeder' && current === 'profile_breeder' && <BreederDashboard />}
-            {roleLocal === 'breeder' && current === 'transfer' && <Transfer />}
-            {roleLocal === 'breeder' && current === 'import_export' && <ImportExport />}
-            {roleLocal === 'breeder' && current === 'kyc' && <BreederKYC />}
-            {roleLocal === 'internal' && current === 'kyc_moderation' && <KYCModeration />}
-            {roleLocal === 'internal' && current === 'admin_dictionaries' && <AdminDictionaries />}
-            {roleLocal === 'internal' && current === 'admin_moderation' && <AdminModeration />}
-            {roleLocal === 'internal' && current === 'admin_reviews' && <AdminReviews />}
-            {roleLocal === 'internal' && current === 'admin_qa' && <AdminQA />}
-            {roleLocal === 'internal' && current === 'admin_breeders' && <AdminBreeders />}
-            {roleLocal === 'internal' && current === 'admin_dicts' && <AdminDicts />}
-            {roleLocal === 'internal' && current === 'admin_audit' && <AdminAudit />}
-            {['internal','regional_admin'].includes(roleLocal) && current === 'moderation' && <Moderation />}
-            {/* Legacy mapping removed per RBAC_NAV_V1.FINAL */}
-            {['buyer','breeder','regional_admin'].includes(roleLocal) && current === 'orders' && <Orders />}
+            {role === 'breeder' && current === 'breeder_listings' && <BreederListings />}
+            {role === 'breeder' && current === 'breeder_dashboard' && <BreederDashboard />}
+            {role === 'breeder' && current === 'transfer' && <Transfer />}
+            {role === 'breeder' && current === 'import_export' && <ImportExport />}
+            {role === 'breeder' && current === 'kyc' && <BreederKYC />}
+            {role === 'internal' && current === 'kyc_moderation' && <KYCModeration />}
+            {role === 'internal' && current === 'admin_dictionaries' && <AdminDictionaries />}
+            {role === 'internal' && current === 'admin_moderation' && <AdminModeration />}
+            {role === 'internal' && current === 'admin_reviews' && <AdminReviews />}
+            {role === 'internal' && current === 'admin_qa' && <AdminQA />}
+            {role === 'internal' && current === 'admin_breeders' && <AdminBreeders />}
+            {role === 'internal' && current === 'admin_dicts' && <AdminDicts />}
+            {role === 'internal' && current === 'admin_audit' && <AdminAudit />}
+            {['internal','regional_admin'].includes(role) && current === 'moderation' && <Moderation />}
+            {/* Orders */}
+            {['buyer','breeder','regional_admin'].includes(role) && current === 'orders' && <Orders />}
             
 
             {/* Аналітика — What-if */}
@@ -240,6 +239,10 @@ function Shell() {
             )}
             {current === 'breeders' && <BreedersCatalog />}
             {current === 'settings_dev' && <SettingsDev />}
+            {/* Build badge */}
+            {typeof __BUILD_SHA__ === 'string' && __BUILD_SHA__ && (
+              <div className="mt-8 text-xs text-[var(--secondary)]">Build: {__BUILD_SHA__} • {__BUILD_TIME__}</div>
+            )}
           </main>
         </div>
       </div>

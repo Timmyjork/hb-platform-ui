@@ -4,6 +4,8 @@ import HBAppShell from '../../HBAppShell'
 describe('HBAppShell navigation', () => {
   it('breeder sees key analytics pages and they render', async () => {
     render(<HBAppShell />)
+    const roleSel = screen.getByLabelText('Оберіть роль') as HTMLSelectElement
+    fireEvent.change(roleSel, { target: { value: 'breeder' } })
     const nav = screen.getByTestId('nav')
     within(nav).getByRole('button', { name: 'Спостереження (вуликова карта)' })
     within(nav).getByRole('button', { name: 'Рейтинги' })

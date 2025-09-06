@@ -12,6 +12,8 @@ async function clickNav(label: string) {
 describe('HBAppShell navigation', () => {
   it('breeder: Ratings/Regional/Alerts render expected UI', async () => {
     render(<HBAppShell />)
+    const roleSelect = screen.getByLabelText('Оберіть роль') as HTMLSelectElement
+    fireEvent.change(roleSelect, { target: { value: 'breeder' } })
     // Ratings
     await clickNav('Рейтинги')
     await waitFor(() => expect(screen.getByText('Експорт CSV')).toBeInTheDocument())
