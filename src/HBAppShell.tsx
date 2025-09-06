@@ -40,6 +40,7 @@ import AdminQA from './pages/AdminQA'
 import AdminBreeders from './pages/AdminBreeders'
 import AdminDicts from './pages/AdminDicts'
 import AdminAudit from './pages/AdminAudit'
+import BuildStamp from './components/BuildStamp'
 
 // New RBAC-based nav lives in src/nav.ts
 
@@ -241,13 +242,10 @@ function Shell() {
             )}
             {current === 'breeders' && <BreedersCatalog />}
             {current === 'settings_dev' && <SettingsDev />}
-            {/* Build badge */}
-            {typeof __BUILD_SHA__ === 'string' && __BUILD_SHA__ && (
-              <div className="mt-8 text-xs text-[var(--secondary)]">Build: {__BUILD_SHA__} • {__BUILD_TIME__}</div>
-            )}
           </main>
         </div>
       </div>
+      <BuildStamp />
     </ToastProvider>
   );
 }

@@ -28,8 +28,13 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          VITE_BASE: /${{ github.event.repository.name }}/
+          VITE_GIT_SHA: ${{ github.sha }}
+          VITE_BUILD_NUM: ${{ github.run_number }}
+          VITE_BUILD_AT: ${{ github.run_started_at }}
         run: |
-          VITE_BASE=/${{ github.event.repository.name }}/ npm run build
+          npm run build
           cp dist/index.html dist/404.html
 
       - name: Upload artifact

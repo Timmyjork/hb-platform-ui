@@ -41,6 +41,9 @@ jobs:
         run: npm run build
         env:
           VITE_BASE: ${{ env.VITE_BASE }}
+          VITE_GIT_SHA: ${{ github.sha }}
+          VITE_BUILD_NUM: ${{ github.run_number }}
+          VITE_BUILD_AT: ${{ github.run_started_at }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
