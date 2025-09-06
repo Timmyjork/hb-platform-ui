@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "./useAuth";
+import { loginAsBuyer as storeLoginBuyer, loginAsBreeder as storeLoginBreeder, logout as storeLogout } from '../state/profile.store'
 import type { RoleKey } from "./useAuth";
 import Button from "../components/ui/Button";
 import Select from "../components/ui/Select";
@@ -28,6 +29,8 @@ export default function AuthMenu({ onRoleSync }: { onRoleSync: (r: RoleKey) => v
       provider,
       role,
     });
+    if (role === 'buyer') storeLoginBuyer(email)
+    if (role === 'breeder') storeLoginBreeder(email)
     onRoleSync(role);
     setOpen(false);
   };
@@ -49,6 +52,10 @@ export default function AuthMenu({ onRoleSync }: { onRoleSync: (r: RoleKey) => v
         {open && (
           <Modal onClose={() => setOpen(false)} title="Вхід / Реєстрація">
             <div className="space-y-3">
+              <div className="flex gap-2">
+                <Button onClick={() => { storeLoginBuyer(email||'buyer@example.com'); setOpen(false) }}>Увійти як покупець</Button>
+                <Button variant="secondary" onClick={() => { storeLoginBreeder(email||'breeder@example.com'); setOpen(false) }}>Увійти як маткар</Button>
+              </div>
               <div>
                 <div className="mb-1 text-xs font-medium text-[var(--secondary)]">Обрати роль</div>
                 <Select
@@ -110,7 +117,7 @@ export default function AuthMenu({ onRoleSync }: { onRoleSync: (r: RoleKey) => v
               items={ROLE_ITEMS.map((r) => ({ label: r.label, value: r.value }))}
             />
           </div>
-          <Button variant="secondary" onClick={logout}>Вийти</Button>
+          <Button variant="secondary" onClick={() => { storeLogout(); logout() }}>Вийти</Button>
         </div>
       </details>
     </div>

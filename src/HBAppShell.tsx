@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ToastProvider, useToast } from "./components/ui/Toast";
-import { AuthProvider, useAuth } from './auth/useAuth'
+import { AuthProvider } from './auth/useAuth'
 import AuthMenu from './auth/AuthMenu'
 import { NAV_BY_ROLE, type RoleKey as NewRoleKey } from './infra/rbac'
+import { getAuth as getProfileAuth, onAuthChange as onProfileAuthChange, setRole as setProfileRole, type RoleKey as StoreRoleKey } from './state/profile.store'
 import DataTable from "./components/table/DataTable";
 import type { Row as QueenRow } from "./components/table/DataTable";
 import Button from "./components/ui/Button";
@@ -61,11 +62,17 @@ const demoRows: QueenRow[] = [
 ];
 
 function Shell() {
-  const { role, setRole } = useAuth()
+  const [role, setRoleEff] = useState<StoreRoleKey>('guest')
   const [active, setActive] = useState<string>('shop')
   const items = useMemo(() => NAV_BY_ROLE[role] ?? [], [role])
   const isValid = items.some(i => i.id === active)
   const current = isValid ? active : (items[0]?.id ?? 'shop')
+  useEffect(() => {
+    // Initialize from profile.store and subscribe
+    setRoleEff(getProfileAuth().role)
+    const off = onProfileAuthChange(() => { setRoleEff(getProfileAuth().role) })
+    return off
+  }, [])
   useEffect(() => {
     if (!items.length) return
     if (!items.some(i => i.id === active)) {
@@ -111,7 +118,7 @@ function Shell() {
               <CartButton onClick={() => setActive('cart')} />
               <AuthMenu onRoleSync={() => { /* role changes propagate via context */ }} />
               <div className="hidden">
-                <RoleSelector value={role} onChange={(v) => { setRole(v); try { localStorage.setItem('ui.role', v) } catch (_e) { /* ignore */ } }} />
+                <RoleSelector value={role} onChange={(v) => { try { localStorage.setItem('ui.role', v) } catch (_e) {}; setProfileRole(v as StoreRoleKey) }} />
               </div>
             </div>
           </div>

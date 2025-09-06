@@ -63,3 +63,62 @@ export function getBreederDefaults(userId = 'currentUser') {
     breederNo: p.breederNo,
   }
 }
+
+// ——— Auth facade (source of truth for role in shell)
+export type RoleKey = 'guest'|'buyer'|'breeder'|'regional_admin'|'internal'|'global_admin'
+export type CurrentUser = { id: string|null; email?: string|null; role: RoleKey }
+
+const LS_AUTH = 'hb.auth'
+let auth: CurrentUser | null = null
+const listeners = new Set<() => void>()
+
+function emitAuth() { listeners.forEach(fn => { try { fn() } catch {} }) }
+
+export function getAuth(): CurrentUser {
+  if (auth) return auth
+  try {
+    const raw = localStorage.getItem(LS_AUTH)
+    if (raw) { auth = JSON.parse(raw) as CurrentUser; return auth }
+  } catch {}
+  auth = { id: null, email: null, role: 'guest' }
+  return auth
+}
+
+function setAuth(next: CurrentUser) {
+  auth = next
+  try { localStorage.setItem(LS_AUTH, JSON.stringify(next)) } catch {}
+  emitAuth()
+}
+
+export function onAuthChange(cb: () => void): () => void {
+  listeners.add(cb)
+  return () => { listeners.delete(cb) }
+}
+
+export function loginAsBuyer(email: string): CurrentUser {
+  const uid = `Buyer-${Math.random().toString(36).slice(2,6)}`
+  const u: CurrentUser = { id: uid, email, role: 'buyer' }
+  setAuth(u)
+  return u
+}
+
+export function loginAsBreeder(email?: string): CurrentUser {
+  const uid = 'breeder'
+  const u: CurrentUser = { id: uid, email: email || null, role: 'breeder' }
+  setAuth(u)
+  return u
+}
+
+export function logout(): void {
+  setAuth({ id: null, email: null, role: 'guest' })
+  try { localStorage.removeItem(LS_AUTH); localStorage.removeItem('hb.role') } catch {}
+}
+
+export function setRole(r: RoleKey): void {
+  if (r === 'guest') {
+    logout(); return
+  }
+  const cur = getAuth()
+  const id = cur.id || 'U_TEST'
+  setAuth({ id, email: cur.email || null, role: r })
+}
