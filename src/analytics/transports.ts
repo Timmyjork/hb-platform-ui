@@ -3,6 +3,7 @@ export type Delivery = { id: string; createdAt: string; channel: Transport; ok: 
 export type DeliveryPayload = { ruleId: string; title: string; message: string; level: 'info'|'warning'|'critical'; at: string };
 export type DeliveryRequest = { channel: Transport; target?: string; payload: DeliveryPayload };
 export type DeliveryResult = { ok: boolean; channel: string; error?: string };
+type HttpRes = { ok: boolean; status?: number }
 
 const LS_KEY = 'hb.deliveries';
 
@@ -29,18 +30,15 @@ export async function deliver(req: DeliveryRequest): Promise<DeliveryResult> {
   }
   if (!isUrl(req.target)) { pushDelivery({ id, createdAt, channel:'webhook', ok:false, error:'Invalid url', details:req }); return { ok:false, channel:'webhook', error:'Invalid url' } }
   try {
-    // fetch guard
     const hasFetch = typeof (globalThis as Record<string, unknown>).fetch === 'function';
-    const res = hasFetch
+    const res: HttpRes = hasFetch
       ? await fetch(req.target!, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(req.payload),
         })
-      : ({ ok: false } as Response);
-    const r = res as Response | { ok?: boolean; status?: number };
-    const rr = r as { ok?: boolean; status?: number };
-    const ok = (rr.ok === true) || (typeof rr.status === 'number' && rr.status >= 200 && rr.status < 300)
+      : { ok: false };
+    const ok = (res.ok === true) || (typeof res.status === 'number' && res.status >= 200 && res.status < 300)
     pushDelivery({ id, createdAt, channel:'webhook', ok, details:req, error: ok? undefined : 'HTTP error' })
     return { ok, channel:'webhook', error: ok? undefined : 'HTTP error' }
   } catch (_e) {
@@ -59,4 +57,4 @@ export async function sendTransferEmail(to: string, payload: { queenId: string; 
 import { enqueue } from '../infra/queue'
 export async function deliverEmail(to: string, subject: string, body: string): Promise<{ok:true}> { enqueue({ type:'email', to, subject, body }); return { ok: true } }
 export async function deliverSMS(to: string, body: string): Promise<{ok:true}> { enqueue({ type:'sms', to, body }); return { ok: true } }
-export async function deliverWebhook(url: string, payload: any): Promise<{ok:boolean,status?:number}> { enqueue({ type:'webhook', url, payload }); return { ok: true } }
+export async function deliverWebhook(url: string, payload: Record<string, unknown>): Promise<{ok:boolean,status?:number}> { enqueue({ type:'webhook', url, payload }); return { ok: true } }

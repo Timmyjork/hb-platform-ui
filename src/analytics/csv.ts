@@ -50,7 +50,7 @@ export function toCsvRow(s: { input: PhenotypeInput; params: WhatIfParams; out: 
     notes: (s.out.notes ?? []).join('; '),
   }
   const headers = Object.keys(flat)
-  const values = headers.map((h) => esc((flat as any)[h]))
+  const values = headers.map((h) => esc(flat[h]))
   return values.join(',')
 }
 
@@ -59,4 +59,3 @@ export function downloadCsv(rows: string[], filename: string): void {
   const name = filename.endsWith('.csv') ? filename : `${filename}.csv`
   downloadBlob(name, 'text/csv;charset=utf-8', csv)
 }
-

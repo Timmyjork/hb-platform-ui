@@ -11,21 +11,40 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: "pages"
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
-          cache: npm
-      - run: npm ci
-      - name: Build (Vite base path)
-        run: npm run build -- --base=/hb-platform-ui/
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:run -s
+
+      - name: Compute base path for project pages
+        # для repo timmyjork/hb-platform-ui -> /hb-platform-ui/
+        run: echo "VITE_BASE=/${GITHUB_REPOSITORY#*/}/" >> $GITHUB_ENV
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_BASE: ${{ env.VITE_BASE }}
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

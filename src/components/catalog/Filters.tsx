@@ -36,12 +36,12 @@ export default function CatalogFilters() {
       const url = `${window.location.pathname}${qs ? '?' + qs : ''}`
       window.history.replaceState({}, '', url)
     }
-  }, [])
+  }, [breeds, regionsISO])
   useEffect(() => {
     if (!sp.get('breed') && breeds.some(b => b.code === 'buckfast')) {
       setBreed('buckfast')
     }
-  }, [breeds.length])
+  }, [breeds, sp])
 
   useLayoutEffect(() => { updateUrl(breed, region) }, [breed, region])
 

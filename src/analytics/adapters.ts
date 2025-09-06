@@ -95,13 +95,12 @@ export async function fetchBreederMeasures(): Promise<SourceMeasure[]> {
   for (const q of queens) {
     // Ignore invalid IDs defensively
     if (!parseQId(q.id)) {
-      if (import.meta && (import.meta as any).env && (import.meta as any).env.DEV) {
-        // eslint-disable-next-line no-console
+      if (typeof import.meta !== 'undefined' && (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) {
         console.warn('Ignoring queen with invalid ID in analytics adapter:', q.id)
       }
       continue
     }
-    const base = q.baseTraits ? traitsToSI_BV(q.baseTraits) : { si: undefined, bv: undefined } as any
+    const base: { si?: number; bv?: number } = q.baseTraits ? traitsToSI_BV(q.baseTraits) : { si: undefined, bv: undefined }
     rows.push({ breederId: q.breederId || q.breedCode, beekeeperId: q.ownerUserId || 'unknown', queenId: q.id, date: q.createdAt || nowIso, si: base.si, bv: base.bv, weight: 1 })
     const obs = listObservationsByQueen(q.id)
     for (const o of obs) {

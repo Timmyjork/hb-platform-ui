@@ -20,6 +20,17 @@ export function append(event: AuditEvent): void {
 export function list(filter?: Partial<{ orderId:string; paymentId:string }>): AuditEvent[] {
   const rows: AuditEvent[] = (()=>{ try { return JSON.parse(localStorage.getItem(LS)||'[]') as AuditEvent[] } catch { return [] } })()
   if (!filter) return rows
-  return rows.filter(ev => (filter.orderId? (ev as any).orderId===filter.orderId: true) && (filter.paymentId? (ev as any).paymentId===filter.paymentId: true))
+  return rows.filter(ev => {
+    const orderOk = filter.orderId ? ('orderId' in ev && ev.orderId === filter.orderId) : true
+    const payOk = filter.paymentId ? ('paymentId' in ev && ev.paymentId === filter.paymentId) : true
+    return orderOk && payOk
+  })
 }
 
+// Lightweight console logger for misc events (typed)
+export type LogEvent = 'INFO' | 'WARN' | 'ERROR' | 'ACTION'
+export type LogPayload = Record<string, unknown>
+
+export function log(event: LogEvent, message: string, payload?: LogPayload): void {
+  console.log(`[${event}] ${message}`, payload)
+}

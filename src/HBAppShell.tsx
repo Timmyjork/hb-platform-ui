@@ -12,7 +12,6 @@ import HiveCard from "./pages/HiveCard";
 import AnalyticsRatings from "./pages/AnalyticsRatings";
 import AnalyticsRegional from "./pages/AnalyticsRegional";
 import AnalyticsAlerts from "./pages/AnalyticsAlerts";
-import Analytics from "./pages/Analytics";
 import AnalyticsReadOnly from './pages/AnalyticsReadOnly'
 import AnalyticsWhatIf from "./pages/AnalyticsWhatIf";
 import QueensCreateBatch from "./pages/QueensCreateBatch";
@@ -60,22 +59,18 @@ const demoRows: QueenRow[] = [
 ];
 
 function Shell() {
-  const { role } = useAuth()
+  const { role, setRole } = useAuth()
   const [roleLocal, setRoleLocal] = useState<NewRoleKey>('breeder')
-  const [active, setActive] = useState<string>(() => {
-    const first = NAV_BY_ROLE[role]?.[0]?.id;
-    return first ?? "dashboard";
-  });
-  const items = NAV_BY_ROLE[roleLocal] ?? [];
-  const isValid = items.some((i) => i.id === active);
-  const current = isValid ? active : (items[0]?.id ?? "dashboard");
+  const [active, setActive] = useState<string>('dashboard')
+  const items = useMemo(() => NAV_BY_ROLE[roleLocal] ?? [], [roleLocal])
+  const isValid = items.some(i => i.id === active)
+  const current = isValid ? active : (items[0]?.id ?? 'dashboard')
   useEffect(() => {
-    const first = NAV_BY_ROLE[roleLocal]?.[0]?.id;
-    const hasActive = (NAV_BY_ROLE[roleLocal] ?? []).some((i) => i.id === active);
-    if (first && active !== first && !hasActive) {
-      setActive(first);
+    if (!items.length) return;
+    if (!items.some(i => i.id === active)) {
+      setActive(items[0].id)
     }
-  }, [roleLocal])
+  }, [roleLocal, items, active])
   const nav = useMemo(() => items, [items])
 
   return (
@@ -114,7 +109,7 @@ function Shell() {
             <div className="ml-auto flex items-center gap-3">
               <AuthMenu onRoleSync={() => { /* role changes propagate via context */ }} />
               <div className="hidden">
-                <RoleSelector value={roleLocal} onChange={setRoleLocal} />
+                <RoleSelector value={roleLocal} onChange={(v) => { setRoleLocal(v); setRole(v) }} />
               </div>
             </div>
           </div>
@@ -132,7 +127,7 @@ function Shell() {
                   <button
                     onClick={() => setActive(item.id)}
                     className={`group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${
-                      active === item.id
+                      current === item.id
                         ? "bg-[var(--primary)]/10 text-[var(--text)] ring-1 ring-[var(--primary)]"
                         : "hover:bg-gray-100"
                     }`}
@@ -148,10 +143,10 @@ function Shell() {
 
           {/* Головний вміст */}
           <main className="min-h-[calc(100vh-56px)] p-4 md:p-6">
-            <Breadcrumb roleKey={role} activeId={active} />
+            <Breadcrumb roleKey={role} activeId={current} />
 
             {/* Для маткаря (queens) */}
-            {role === "breeder" && active === "queens" && (
+            {role === "breeder" && current === "queens" && (
               <>
                 <HeaderActions />
                 <section className="mt-4">
@@ -168,7 +163,7 @@ function Shell() {
             )}
 
             {/* Для пасічника (каталог/мої матки) */}
-            {role === "buyer" && active === "catalog" && (
+            {role === "buyer" && current === "catalog" && (
               <>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <h1 className="text-xl font-semibold">Мої матки / Куплені</h1>
@@ -177,7 +172,7 @@ function Shell() {
               </>
             )}
 
-            {role === "buyer" && active === "my_queens" && (
+            {role === "buyer" && current === "my_queens" && (
               <>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <h1 className="text-xl font-semibold">Мої матки</h1>
