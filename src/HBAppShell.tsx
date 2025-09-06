@@ -41,7 +41,8 @@ import AdminQA from './pages/AdminQA'
 import AdminBreeders from './pages/AdminBreeders'
 import AdminDicts from './pages/AdminDicts'
 import AdminAudit from './pages/AdminAudit'
-import BuildStamp from './components/BuildStamp'
+// import BuildStamp from './components/BuildStamp' // footer disabled to avoid duplication
+import HeaderVersionBadge from './components/HeaderVersionBadge'
 
 // New RBAC-based nav lives in src/nav.ts
 
@@ -133,6 +134,7 @@ function Shell() {
             </div>
             <div className="ml-auto flex items-center gap-3">
               <button className="hidden md:inline rounded-md border border-[var(--divider)] bg-[var(--surface)] px-3 py-1.5 text-sm hover:bg-gray-50" onClick={()=> setActive('shop')}>Магазин</button>
+              <HeaderVersionBadge />
               {(role==='buyer' || role==='breeder') && (
                 <button className="hidden md:inline rounded-md border border-[var(--divider)] bg-[var(--surface)] px-3 py-1.5 text-sm hover:bg-gray-50" onClick={()=> setActive(role==='breeder' ? 'breeder_dashboard':'my_queens')}>Мій профіль</button>
               )}
@@ -273,7 +275,7 @@ function Shell() {
           </main>
         </div>
       </div>
-      <BuildStamp />
+      {/* <BuildStamp /> */}
     </ToastProvider>
   );
 }
