@@ -1,18 +1,8 @@
 // no react import needed for tsx with React 17+ JSX runtime
-
-// Read build data from env (CI) with local fallbacks
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const git = (import.meta as any).env?.VITE_GIT_SHA || ''
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const run = (import.meta as any).env?.VITE_BUILD_NUM || ''
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const builtAt = (import.meta as any).env?.VITE_BUILD_AT || ''
-
-const shortSha = git ? String(git).slice(0, 7) : 'local'
-const v = run ? `v${run}` : 'v0'
-const ts = builtAt || new Date().toISOString().replace('T', ' ').replace(/\..+/, ' UTC')
+import { BUILD } from '../version'
 
 export default function BuildStamp() {
+  const { vText, done, total, pct, gitShort, run, ts } = BUILD
   return (
     <div
       style={{
@@ -39,7 +29,7 @@ export default function BuildStamp() {
         }}
         aria-label="build-stamp"
       >
-        build {v} • {shortSha} • {ts}
+        {vText} • {done}/{total} кроків ({pct}%) • {gitShort} {run} • {ts}
       </div>
     </div>
   )
