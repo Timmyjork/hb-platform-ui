@@ -20,7 +20,7 @@ export async function handlePaymentsWebhook(body: WebhookEvent, headers: Record<
   const orderId = body.data?.orderId
   if (!orderId) return { ok: true }
   if (type === 'payment_intent.succeeded') {
-    markPaid(orderId, body.data?.intentId || '')
+    markPaid(orderId)
     await processPaidOrder({ id: orderId, buyerId: body.data?.buyerId, items: body.data?.items, subtotalUAH: 0, status: 'paid', payment: { status: 'succeeded', method: 'mock' }, passports: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as any)
   } else if (type === 'payment_intent.payment_failed') {
     markPaymentFailed(orderId, 'failed')

@@ -1,8 +1,7 @@
 import { cart as cartStore, getCart } from '../shop/cart.store'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
-import { createDraft, place, payMock, markTransferred } from '../shop/orders.store'
-import { processPaidOrder } from '../shop/flow'
+import { createOrderFromCart } from '../shop/orders.store'
 
 export default function Cart() {
   const [seed, setSeed] = useState(0)
@@ -13,15 +12,9 @@ export default function Cart() {
   async function onCheckout() {
     if (!canCheckout) return
     const buyerId = user?.id || 'Buyer-1'
-    const draft = createDraft(buyerId, rows.map(r=> ({ listingId: r.listingId, qty: r.qty })))
-    place(draft.id)
-    const paid = payMock(draft.id, true)
-    if (paid.payment.status === 'succeeded') {
-      const issued = await processPaidOrder(paid)
-      markTransferred(paid.id, issued)
-      cartStore.clear(); setSeed(x=>x+1)
-      alert('Успіх: оплата та передача')
-    }
+    createOrderFromCart(buyerId, { name: user?.name || 'Клієнт', email: user?.email || 'buyer@example.com' })
+    cartStore.clear(); setSeed(x=>x+1)
+    alert('Замовлення створено')
   }
   return (
     <div className="p-4 rounded-xl border border-[var(--divider)] bg-[var(--surface)] shadow-sm">

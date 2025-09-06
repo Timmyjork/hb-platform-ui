@@ -7,6 +7,7 @@
   "buyer": [
     { "id": "shop", "label": "Магазин", "public": true },
     { "id": "cart", "label": "Кошик" },
+    { "id": "orders", "label": "Замовлення" },
     { "id": "my_queens", "label": "Мої матки" },
     { "id": "observations", "label": "Спостереження (вуликова карта)" },
     { "id": "analytics_readonly", "label": "Аналітика (read-only)" },
