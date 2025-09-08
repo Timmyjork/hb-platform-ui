@@ -13,7 +13,7 @@ export default function HeaderVersionBadge() {
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
   }, [open])
 
-  const ts = BUILD_INFO.builtAtISO.replace('T',' ').replace(/\..+/, ' UTC')
+  const ts = BUILD_INFO.builtAt.replace('T',' ').replace(/\..+/, ' UTC')
   const aria = `Версія: ${BUILD_INFO.version} • ${BUILD_INFO.progress}`
   return (
     <div className="relative" ref={ref}>
@@ -44,4 +44,3 @@ export default function HeaderVersionBadge() {
     </div>
   )
 }
-

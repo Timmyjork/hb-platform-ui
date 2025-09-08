@@ -3,7 +3,7 @@ export type BuildInfo = {
   progress: string
   channel: string
   commit?: string
-  builtAtISO: string
+  builtAt: string
 }
 
 export const BUILD_INFO: BuildInfo = {
@@ -12,10 +12,9 @@ export const BUILD_INFO: BuildInfo = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   progress: (import.meta as any).env?.VITE_APP_PROGRESS ?? '—',
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  channel: (import.meta as any).env?.VITE_CHANNEL ?? (typeof location !== 'undefined' && location.host.includes('github.io') ? 'prod' : 'local'),
+  channel: (import.meta as any).env?.VITE_APP_CHANNEL ?? 'local',
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  commit: (import.meta as any).env?.VITE_COMMIT ? String((import.meta as any).env?.VITE_COMMIT).slice(0, 7) : undefined,
+  commit: (import.meta as any).env?.VITE_APP_COMMIT ? String((import.meta as any).env?.VITE_APP_COMMIT).slice(0, 7) : undefined,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  builtAtISO: (import.meta as any).env?.VITE_BUILT_AT ?? new Date().toISOString(),
+  builtAt: (import.meta as any).env?.VITE_APP_BUILT_AT ?? new Date().toISOString(),
 }
-

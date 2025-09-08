@@ -30,14 +30,11 @@ jobs:
       - name: Build
         env:
           VITE_BASE: /${{ github.event.repository.name }}/
-          VITE_GIT_SHA: ${{ github.sha }}
-          VITE_BUILD_NUM: ${{ github.run_number }}
-          VITE_BUILD_AT: ${{ github.run_started_at }}
-          VITE_APP_VERSION: ${{ env.VITE_APP_VERSION || 'v0' }}
-          VITE_APP_PROGRESS: ${{ env.VITE_APP_PROGRESS || '—' }}
-          VITE_CHANNEL: prod
-          VITE_COMMIT: ${{ github.sha }}
-          VITE_BUILT_AT: ${{ github.run_started_at }}
+          VITE_APP_VERSION: v1.0
+          VITE_APP_PROGRESS: 24/24
+          VITE_APP_CHANNEL: pages
+          VITE_APP_COMMIT: ${{ github.sha }}
+          VITE_APP_BUILT_AT: ${{ github.run_started_at }}
         run: |
           npm run build
           cp dist/index.html dist/404.html

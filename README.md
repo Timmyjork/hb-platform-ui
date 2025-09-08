@@ -70,3 +70,14 @@ export default tseslint.config([
   },
 ])
 ```
+## Path routing (GH Pages)
+
+Supported client paths (deep links) without server routes:
+
+- `/guest/(shop|cart|ratings)`
+- `/pasichnik/(shop|cart|orders|my_queens|observations)`
+- `/matkar/(queens_batch|listings|orders|transfer)`
+- `/golova/(regions|ratings)`
+- `/admin/(...)`
+
+SPA fallback is enabled via `404.html` copy in workflows. Base path is derived from `VITE_BASE`.

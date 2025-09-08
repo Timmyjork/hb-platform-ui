@@ -4,6 +4,7 @@ import { AuthProvider } from './auth/useAuth'
 import AuthMenu from './auth/AuthMenu'
 import { NAV_BY_ROLE, type RoleKey as NewRoleKey } from './infra/rbac'
 import { getAuth as getProfileAuth, onAuthChange as onProfileAuthChange, setRole as setProfileRole, type RoleKey as StoreRoleKey } from './state/profile.store'
+import { parsePath, buildPath } from './router/pathRouter'
 import DataTable from "./components/table/DataTable";
 import type { Row as QueenRow } from "./components/table/DataTable";
 import Button from "./components/ui/Button";
@@ -75,22 +76,23 @@ function Shell() {
     return off
   }, [])
   useEffect(() => {
-    // Role aliases via URL: ?role= has highest priority; then pathname aliases
+    // Parse URL path for role + page
+    const base = (import.meta as any).env?.BASE_URL || '/'
     const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
     const qRole = params.get('role') as StoreRoleKey | null
-    const path = typeof window !== 'undefined' ? window.location.pathname : ''
-    const aliasMap: Record<string, StoreRoleKey> = {
-      '/pasichnik': 'buyer', '/buyer': 'buyer',
-      '/matkar': 'breeder', '/breeder': 'breeder',
-      '/golova': 'regional_admin', '/regional_admin': 'regional_admin',
-      '/guest': 'guest',
-      '/admin': 'internal', '/local_admin': 'internal',
-    }
-    let aliasRole: StoreRoleKey | null = null
-    for (const [alias, r] of Object.entries(aliasMap)) { if (path.endsWith(alias)) { aliasRole = r; break } }
-    const nextRole = (qRole || aliasRole)
+    const { role: roleFromPath, pageId } = parsePath(base, typeof window !== 'undefined' ? window.location.pathname : '/')
+    const nextRole = qRole || roleFromPath
     if (nextRole) { try { localStorage.setItem('hb.role', nextRole) } catch (_e) { /* ignore */ }; setProfileRole(nextRole) }
+    if (pageId) setActive(pageId)
   }, [])
+  useEffect(() => {
+    // Keep URL in sync with current role + page
+    const base = (import.meta as any).env?.BASE_URL || '/'
+    const path = buildPath(base, role, current)
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', path)
+    }
+  }, [role, current])
   useEffect(() => {
     if (!items.length) return
     if (!items.some(i => i.id === active)) {
