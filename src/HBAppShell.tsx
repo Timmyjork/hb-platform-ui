@@ -44,6 +44,7 @@ import AdminDicts from './pages/AdminDicts'
 import AdminAudit from './pages/AdminAudit'
 // import BuildStamp from './components/BuildStamp' // footer disabled to avoid duplication
 import HeaderVersionBadge from './components/HeaderVersionBadge'
+import HeaderRoleQuickSwitch from './components/HeaderRoleQuickSwitch'
 
 // New RBAC-based nav lives in src/nav.ts
 
@@ -135,8 +136,9 @@ function Shell() {
               />
             </div>
             <div className="ml-auto flex items-center gap-3">
-              <button className="hidden md:inline rounded-md border border-[var(--divider)] bg-[var(--surface)] px-3 py-1.5 text-sm hover:bg-gray-50" onClick={()=> setActive('shop')}>Магазин</button>
+              <button className="hidden md:inline rounded-md border border-[var(--divider)] bg-[var(--surface)] px-3 py-1.5 text-sm hover:bg-gray-50" onClick={()=> setActive('shop')}>Вибір маток</button>
               <HeaderVersionBadge />
+              <HeaderRoleQuickSwitch />
               {(role==='buyer' || role==='breeder') && (
                 <button className="hidden md:inline rounded-md border border-[var(--divider)] bg-[var(--surface)] px-3 py-1.5 text-sm hover:bg-gray-50" onClick={()=> setActive(role==='breeder' ? 'breeder_dashboard':'my_queens')}>Мій профіль</button>
               )}
@@ -229,7 +231,7 @@ function Shell() {
             {typeof window !== 'undefined' && window.location.pathname.startsWith('/breeder/') && <BreederPublic />}
             {typeof window !== 'undefined' && (window.location.pathname.startsWith('/q/') || window.location.pathname.startsWith('/queen/')) && <QueenPublic />}
 
-            {/* Магазин / Покупки */}
+            {/* Вибір маток / Покупки */}
             {['guest','buyer','breeder','regional_admin'].includes(role) && current === 'shop' && <Shop />}
             {current === 'cart' && <Cart />}
             {role === 'buyer' && current === 'checkout' && <Checkout />}

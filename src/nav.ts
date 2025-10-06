@@ -4,12 +4,12 @@ export type NavItem = { id: string; label: string }
 
 export const NAV_BY_ROLE: Record<RoleKey, NavItem[]> = {
   guest: [
-    { id: 'shop', label: 'Магазин' },
+    { id: 'shop', label: 'Вибір маток' },
     { id: 'cart', label: 'Кошик' },
     { id: 'analytics_ratings', label: 'Рейтинги' },
   ],
   buyer: [
-    { id: 'shop', label: 'Магазин' },
+    { id: 'shop', label: 'Вибір маток' },
     { id: 'cart', label: 'Кошик' },
     { id: 'checkout', label: 'Оформлення' },
     { id: 'my_queens', label: 'Мої матки' },
@@ -22,7 +22,7 @@ export const NAV_BY_ROLE: Record<RoleKey, NavItem[]> = {
     { id: 'settings', label: 'Профіль / Налаштування' },
   ],
   breeder: [
-    { id: 'shop', label: 'Магазин' },
+    { id: 'shop', label: 'Вибір маток' },
     { id: 'breeder_listings', label: 'Мої лістинги' },
     { id: 'breeder_dashboard', label: 'Мій профіль' },
     { id: 'queens_batch', label: 'Нова партія' },
@@ -36,7 +36,7 @@ export const NAV_BY_ROLE: Record<RoleKey, NavItem[]> = {
     { id: 'settings', label: 'Профіль / Налаштування' },
   ],
   regional_admin: [
-    { id: 'shop', label: 'Магазин' },
+    { id: 'shop', label: 'Вибір маток' },
     { id: 'my_queens', label: 'Мої матки' },
     { id: 'observations', label: 'Вуликова карта (спостереження)' },
     { id: 'analytics', label: 'Аналітика (зведення)' },

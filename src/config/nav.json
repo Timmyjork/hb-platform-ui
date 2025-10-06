@@ -1,11 +1,11 @@
 {
   "guest": [
-    { "id": "shop", "label": "Магазин", "public": true },
+    { "id": "shop", "label": "Вибір маток", "public": true },
     { "id": "cart", "label": "Кошик", "public": true },
     { "id": "ratings_public", "label": "Рейтинги", "public": true }
   ],
   "buyer": [
-    { "id": "shop", "label": "Магазин", "public": true },
+    { "id": "shop", "label": "Вибір маток", "public": true },
     { "id": "cart", "label": "Кошик" },
     { "id": "orders", "label": "Замовлення" },
     { "id": "my_queens", "label": "Мої матки" },
@@ -27,7 +27,7 @@
     { "id": "import_export", "label": "Імпорт / Експорт" }
   ],
   "regional_admin": [
-    { "id": "shop", "label": "Магазин", "public": true },
+    { "id": "shop", "label": "Вибір маток", "public": true },
     { "id": "my_queens", "label": "Мої матки" },
     { "id": "observations", "label": "Спостереження (вуликова карта)" },
     { "id": "analytics_readonly", "label": "Аналітика (read-only)" },

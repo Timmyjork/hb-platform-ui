@@ -15,7 +15,7 @@ export default function Shop() {
   }
   return (
     <div className="p-4 rounded-xl border border-[var(--divider)] bg-[var(--surface)] shadow-sm">
-      <h1 className="text-xl font-semibold">Магазин</h1>
+      <h1 className="text-xl font-semibold">Вибір маток</h1>
       <CatalogFilters />
       <div className="overflow-hidden rounded-xl border border-[var(--divider)]">
         <table className="w-full text-sm">
