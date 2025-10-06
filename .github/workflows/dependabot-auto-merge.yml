@@ -2,7 +2,8 @@ name: Dependabot Auto Merge
 
 on:
   pull_request_target:
-    types: [opened, reopened, synchronize]
+    types: [opened, reopened, synchronize, labeled]
+    branches: [main]
 
 permissions:
   contents: write
@@ -14,19 +15,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Dependabot metadata
-        id: metadata
+        id: meta
         uses: dependabot/fetch-metadata@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Approve PR (patch/minor)
-        if: contains('version-update:semver-patch,version-update:semver-minor', steps.metadata.outputs.update-type)
+      - name: Enable auto-merge for patch/minor updates
+        if: contains('version-update:semver-patch,version-update:semver-minor', steps.meta.outputs.update-type)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh pr review ${{ github.event.pull_request.number }} --approve
-
-      - name: Enable auto-merge (squash)
-        if: contains('version-update:semver-patch,version-update:semver-minor', steps.metadata.outputs.update-type)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh pr merge ${{ github.event.pull_request.number }} --auto --squash
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh pr merge --auto --squash "$PR_URL"
